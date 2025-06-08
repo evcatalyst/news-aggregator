@@ -1,0 +1,11 @@
+Application Intent
+- News aggregator
+- chat interface
+
+Guiding Principles
+- Admin interface that lets users securely provide/maintain api keys w/ workflows to support manual rotations for now, integrated rotations in the future
+- 
+
+key compoients
+- news aggregator
+- configurable card models for the news browser

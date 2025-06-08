@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>News Dashboard</title>
+  <link href="./tailwind.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <div class="flex max-w-5xl mx-auto py-8">
+    <!-- Sidebar for Chat -->
+    <aside class="w-full max-w-xs bg-white rounded shadow p-4 mr-8 flex flex-col h-fit">
+      <h2 class="text-xl font-semibold mb-2">Ask Grok</h2>
+      <textarea id="grok-input" class="w-full border rounded p-2 mb-2" rows="4" placeholder="Ask a question..."></textarea>
+      <button id="grok-btn" class="px-4 py-2 bg-blue-600 text-white rounded mb-2">Ask</button>
+      <div id="grok-response" class="mt-2 text-gray-700"></div>
+    </aside>
+    <!-- Main Content for News -->
+    <main class="flex-1">
+      <h1 class="text-3xl font-bold mb-4 text-center">Schenectady News</h1>
+      <div id="news" class="space-y-4"></div>
+    </main>
+  </div>
+  <script src="./app.js"></script>
+</body>
+</html>

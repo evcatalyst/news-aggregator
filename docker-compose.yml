@@ -1,0 +1,28 @@
+version: '3.8'
+services:
+  proxy:
+    build: ./proxy
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./proxy/.env
+    volumes:
+      - ./proxy:/app
+    platform: linux/arm64
+    develop:
+      watch:
+        - path: ./proxy
+          action: rebuild
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./frontend:/app
+    depends_on:
+      - proxy
+    platform: linux/arm64
+    develop:
+      watch:
+        - path: ./frontend
+          action: rebuild
