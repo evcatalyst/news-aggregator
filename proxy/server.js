@@ -94,7 +94,7 @@ app.post('/grok', async (req, res) => {
   console.log('Incoming body:', req.body);
   try {
     // Refine user intent and instruct Grok to return a machine-readable NewsAPI query
-    const userMessage = req.body.messages?.[0]?.content || '';
+    const userMessage = req.body.prompt || req.body.messages?.[0]?.content || '';
     const systemPrompt = `You are an assistant that helps users find relevant news articles.\n` +
       `Given the user's request, extract the main topic, location, and any relevant keywords.\n` +
       `Return your response as a JSON object with the following format:\n` +
@@ -103,22 +103,17 @@ app.post('/grok', async (req, res) => {
     const payload = {
       model: req.body.model || 'grok-3-latest',
       stream: false,
-      temperature: typeof req.body.temperature === 'number' ? req.body.temperature : 0.7,
+      temperature: 0.7,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userMessage }
       ]
     };
-    console.log('Outgoing payload to xAI:', payload);
+    console.log('Outgoing payload to xAI:', JSON.stringify(payload, null, 2));
     const grokResponse = await axios.post(
       'https://api.x.ai/v1/chat/completions',
       payload,
-      {
-        headers: {
-          'Authorization': `Bearer ${XAI_API_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      }
+      { headers: { 'Authorization': `Bearer ${process.env.XAI_API_KEY}` } }
     );
     console.log('Grok API response:', grokResponse.data);
     res.json(grokResponse.data);
