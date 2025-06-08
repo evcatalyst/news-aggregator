@@ -9,3 +9,52 @@ Guiding Principles
 key compoients
 - news aggregator
 - configurable card models for the news browser
+
+---
+
+2025-06-08
+Intent: Refactor frontend for ag-Grid news cards, card pinning/updating, debug toggle, and improved sidebar UX.
+Summary:
+- Integrated ag-Grid for news results in stacked cards (sortable, filterable, groupable).
+- Added ability to pin, update, and remove cards.
+- Sidebar: debug toggle, smaller font, card action controls (create/update with dropdown), removed company icon/reference.
+- Debugging is on by default in dev, toggle in sidebar.
+Files changed: frontend/app.js, frontend/package.json, frontend/index.html, README.md
+
+2025-06-08
+Intent: Fix NewsAPI 500 error on default load when no query is provided.
+Summary:
+- Updated proxy/server.js to fallback to /v2/top-headlines with country=us if no query is provided, preventing 500 errors.
+- Ensured only NewsAPI-supported params are sent to the API.
+Files changed: proxy/server.js
+
+2025-06-08
+Intent: Improve ag-Grid reliability, error handling, and developer workflow.
+Summary:
+- Switched all ag-Grid CSS/JS to CDN links only; removed local node_modules references.
+- Moved ag-Grid CDN script to end of <body> in index.html to guarantee load order.
+- Added waitForAgGrid in app.js to delay app initialization until ag-Grid is available, with clear error if not.
+- Improved Grok response parsing and debug logging in app.js.
+- Added pro forma Playwright/Puppeteer-style UI test (agGridLoad.test.js) for ag-Grid and chat/news card flow.
+- Updated documentation and troubleshooting guidance in README.
+Files changed: frontend/index.html, frontend/app.js, frontend/agGridLoad.test.js, README.md
+
+2025-01-07
+Intent: Fix Docker credential issues and ag-Grid loading problems to unblock development.
+Summary:
+- Fixed Docker credential helper issues by simplifying ~/.docker/config.json (removed "credsStore": "desktop").
+- Resolved ag-Grid loading problems by switching from unreliable CDN to local npm package installation.
+- Updated index.html to load ag-Grid from local node_modules with proper script order (ag-Grid before app.js).
+- Enhanced app.js with robust ag-Grid detection supporting both modern (createGrid) and legacy (Grid) APIs.
+- Removed obsolete version declaration from docker-compose.yml to eliminate warnings.
+- Improved rebuild_stack.sh with simplified Docker handling and removed CDN dependency checks.
+- All 4/4 Playwright tests now pass reliably.
+- Comprehensive README.md overhaul with current architecture, troubleshooting, and development workflow.
+Files changed: proxy/rebuild_stack.sh, docker-compose.yml, frontend/index.html, frontend/app.js, README.md, ~/.docker/config.json
+
+Key Fixes Applied:
+1. **Docker Issues**: Simplified credential handling, removed desktop credential store dependency
+2. **ag-Grid Reliability**: Local npm package installation instead of CDN, improved API detection
+3. **Build Process**: Enhanced rebuild script with better error handling and Docker Compose detection
+4. **Documentation**: Updated with current state, troubleshooting guides, and architecture diagrams
+5. **Testing**: All integration tests now pass consistently

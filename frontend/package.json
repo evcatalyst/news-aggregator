@@ -2,10 +2,18 @@
   "name": "frontend",
   "version": "1.0.0",
   "scripts": {
-    "dev": "npx http-server . -p 8080"
+    "dev": "npx http-server . -p 8080",
+    "test": "npx playwright test",
+    "test:headed": "npx playwright test --headed",
+    "test:debug": "npx playwright test --debug",
+    "test:install": "npx playwright install chromium"
   },
   "devDependencies": {
     "tailwindcss": "^3.4.13",
-    "http-server": "^14.1.1"
+    "http-server": "^14.1.1",
+    "@playwright/test": "^1.43.1"
+  },
+  "dependencies": {
+    "ag-grid-community": "^31.2.1"
   }
 }

@@ -1,7 +1,8 @@
-require('dotenv').config();
-const express = require('express');
-const axios = require('axios');
-const cors = require('cors');
+import dotenv from 'dotenv';
+dotenv.config();
+import express from 'express';
+import axios from 'axios';
+import cors from 'cors';
 
 const app = express();
 app.use(cors());
@@ -66,6 +67,7 @@ app.get('/news', async (req, res) => {
     const from = req.query.from;
     const to = req.query.to;
     const sources = req.query.sources;
+    // Only allow NewsAPI-supported params
     const params = {
       apiKey: NEWS_API_KEY
     };
@@ -73,9 +75,14 @@ app.get('/news', async (req, res) => {
     if (from) params.from = from;
     if (to) params.to = to;
     if (sources) params.sources = sources;
-    const response = await axios.get('https://newsapi.org/v2/everything', {
-      params
-    });
+    // Remove unsupported params (sortBy, language) for /v2/everything fallback
+    // If no q, fallback to /v2/top-headlines with country: 'us'
+    let url = 'https://newsapi.org/v2/everything';
+    if ((!q || q.trim() === '') && !from && !to && !sources) {
+      url = 'https://newsapi.org/v2/top-headlines';
+      params.country = 'us';
+    }
+    const response = await axios.get(url, { params });
     res.json(response.data);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch news', details: error?.response?.data || error.message || error });
@@ -121,6 +128,11 @@ app.post('/grok', async (req, res) => {
     res.status(500).json({ error: 'Failed to contact Grok', details: error?.response?.data || error.message || error });
     console.log('--- GROK PROXY DEBUG END ---');
   }
+});
+
+// Add health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 const PORT = 3000;

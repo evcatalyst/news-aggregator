@@ -5,22 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>News Dashboard</title>
   <link href="./tailwind.css" rel="stylesheet">
+  <link rel="stylesheet" href="./node_modules/ag-grid-community/styles/ag-grid.css">
+  <link rel="stylesheet" href="./node_modules/ag-grid-community/styles/ag-theme-alpine.css">
 </head>
 <body class="bg-gray-100 min-h-screen">
-  <div class="flex max-w-5xl mx-auto py-8">
+  <div style="display: flex; flex-direction: row; max-width: 80vw; margin: 2rem auto; min-height: 80vh;">
     <!-- Sidebar for Chat -->
-    <aside class="w-full max-w-xs bg-white rounded shadow p-4 mr-8 flex flex-col h-fit">
+    <aside id="sidebar" style="width: 320px; min-width: 240px; max-width: 400px; background: #fff; border-radius: 0.5rem; box-shadow: 0 2px 8px #0001; padding: 1.5rem; margin-right: 2rem; display: flex; flex-direction: column; height: fit-content;">
       <h2 class="text-xl font-semibold mb-2">Ask Grok</h2>
       <textarea id="grok-input" class="w-full border rounded p-2 mb-2" rows="4" placeholder="Ask a question..."></textarea>
       <button id="grok-btn" class="px-4 py-2 bg-blue-600 text-white rounded mb-2">Ask</button>
       <div id="grok-response" class="mt-2 text-gray-700"></div>
     </aside>
     <!-- Main Content for News -->
-    <main class="flex-1">
+    <main style="flex: 1;">
       <h1 class="text-3xl font-bold mb-4 text-center">Schenectady News</h1>
       <div id="news" class="space-y-4"></div>
     </main>
   </div>
+  <script src="./node_modules/ag-grid-community/dist/ag-grid-community.min.noStyle.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>
