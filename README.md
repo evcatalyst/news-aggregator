@@ -92,22 +92,18 @@ README.md
 ## Application Architecture
 ```mermaid
 flowchart TD
-  subgraph Frontend
-    A[User] -->|UI/Chat| B[HTML/JS (app.js)]
-  end
-  B -- fetch /news, /grok --> C[Proxy API]
-  subgraph Proxy
-    C -- NewsAPI request --> D[NewsAPI /v2/everything]
-    C -- Grok request --> E[xAI Grok API]
-  end
-  D -.->|JSON| B
-  E -.->|JSON| B
+  User -->|UI/Chat| Frontend[HTML/JS (app.js)]
+  Frontend -- fetch /news, /grok --> ProxyAPI[Proxy API]
+  ProxyAPI -- NewsAPI request --> NewsAPI[NewsAPI /v2/everything]
+  ProxyAPI -- Grok request --> GrokAPI[xAI Grok API]
+  NewsAPI -.->|JSON| Frontend
+  GrokAPI -.->|JSON| Frontend
 ```
 
 ## Infrastructure Architecture
 ```mermaid
-graph TD
-  subgraph Docker Compose
+flowchart TD
+  subgraph DockerCompose[Docker Compose]
     FE[frontend container] -- http://localhost:8080 --> User
     PR[proxy container] -- http://localhost:3000 --> FE
     PR -- Internet --> NewsAPI
@@ -118,7 +114,7 @@ graph TD
 ## Proxy Component Architecture
 ```mermaid
 flowchart TD
-  subgraph Proxy Service
+  subgraph ProxyService[Proxy Service]
     S1[Express.js Server]
     S2[.env Config]
     S3[NewsAPI Handler (/news)]
