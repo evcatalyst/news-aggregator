@@ -1,33 +1,34 @@
-# Automated UI Testing for ag-Grid and Chat/News Card Flow
+# Automated UI Testing for Tabulator and Chat/News Card Flow
 
-## Running UI Tests Locally
+This project uses Playwright for end-to-end UI testing. The main test file is `tabulator.test.js`, which verifies Tabulator table rendering and chat/news card flow.
+
+## Running Tests
 
 1. Install dependencies:
-   
+   ```sh
    cd frontend
    npm install
-   npx playwright install
+   ```
+2. Run Playwright tests:
+   ```sh
+   npx playwright test
+   ```
 
-2. Start the frontend server (in one terminal):
-   
-   npm run dev
-
-3. In another terminal, run the UI tests:
-   
-   npm test
-
----
-
-## About the Tests
-- The UI tests in `agGridLoad.test.js` use Playwright to verify ag-Grid loading and chat/news card flow.
-- Ensure the frontend is running at http://localhost:8080 before running tests.
-
-## CI Integration
-- For CI, add a step to install dependencies, start the frontend server, and run `npm test`.
-- See Playwright docs for advanced CI setup: https://playwright.dev/docs/ci
-
----
+## Test Coverage
+- The UI tests in `tabulator.test.js` use Playwright to verify Tabulator loading and chat/news card flow.
+- If Tabulator or chat UI fails to load, check browser console for errors.
 
 ## Troubleshooting
-- If ag-Grid or chat UI fails to load, check browser console for errors.
-- Ensure all dependencies are installed and the server is running.
+- If the chat/Ask button displays `Grok: undefined` or you see empty prompts in the proxy logs, ensure your proxy/server is correctly passing the user's prompt to the xAI API. The outgoing payload to xAI should use the prompt from the incoming request body.
+- The `/grok` endpoint now parses the xAI response, fetches news from NewsAPI, and returns both the explanation and news results to the frontend.
+- Example fix for Node.js/Express:
+  ```js
+  messages: [
+    { role: 'system', content: '...' },
+    { role: 'user', content: req.body.prompt || '' }
+  ]
+  ```
+- See migration notes in `README_MIGRATION.md`.
+
+## Notes
+- ag-Grid tests and references have been removed. See migration notes in `README_MIGRATION.md`.

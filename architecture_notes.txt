@@ -58,3 +58,14 @@ Key Fixes Applied:
 3. **Build Process**: Enhanced rebuild script with better error handling and Docker Compose detection
 4. **Documentation**: Updated with current state, troubleshooting guides, and architecture diagrams
 5. **Testing**: All integration tests now pass consistently
+
+# Architecture Notes (June 2025)
+
+- **Grid Solution:** Tabulator is the canonical data grid for all news table rendering. ag-Grid is fully removed.
+- **Entry Point:** `app.js` is the only supported frontend entry point. `app_enhanced.js` is archived for historical reference.
+- **Modularization:** Main app logic is split into `app.js`, `state.js`, `ui.js`, `api.js`, and `utils.js` for maintainability.
+- **Testing:** Playwright tests target Tabulator and chat/news card flow (`tabulator.test.js`).
+- **Proxy/Backend:**
+  - `/grok` endpoint receives a user prompt, sends it to xAI Grok, parses the structured JSON response, and fetches news from NewsAPI using the generated query. The response to the frontend includes the explanation, the query, and the news results.
+  - `/news` endpoint provides direct NewsAPI access for custom queries.
+  - All legacy ag-Grid and obsolete files have been removed for a clean, modern codebase.

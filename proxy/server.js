@@ -89,12 +89,13 @@ app.get('/news', async (req, res) => {
   }
 });
 
+// /grok endpoint: Receives a user prompt, sends it to xAI Grok, parses the structured JSON response, and fetches news from NewsAPI using the generated query. Returns the explanation, query, and news results to the frontend.
 app.post('/grok', async (req, res) => {
   console.log('--- GROK PROXY DEBUG START ---');
   console.log('Incoming body:', req.body);
   try {
-    // Refine user intent and instruct Grok to return a machine-readable NewsAPI query
-    const userMessage = req.body.prompt || req.body.messages?.[0]?.content || '';
+    // Use prompt from frontend, not req.body.messages
+    const userPrompt = req.body.prompt || '';
     const systemPrompt = `You are an assistant that helps users find relevant news articles.\n` +
       `Given the user's request, extract the main topic, location, and any relevant keywords.\n` +
       `Return your response as a JSON object with the following format:\n` +
@@ -103,20 +104,59 @@ app.post('/grok', async (req, res) => {
     const payload = {
       model: req.body.model || 'grok-3-latest',
       stream: false,
-      temperature: 0.7,
+      temperature: typeof req.body.temperature === 'number' ? req.body.temperature : 0.7,
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: userMessage }
+        { role: 'user', content: userPrompt }
       ]
     };
-    console.log('Outgoing payload to xAI:', JSON.stringify(payload, null, 2));
+    console.log('Outgoing payload to xAI:', payload);
     const grokResponse = await axios.post(
       'https://api.x.ai/v1/chat/completions',
       payload,
-      { headers: { 'Authorization': `Bearer ${process.env.XAI_API_KEY}` } }
+      {
+        headers: {
+          'Authorization': `Bearer ${XAI_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
     );
     console.log('Grok API response:', grokResponse.data);
-    res.json(grokResponse.data);
+    // Extract and parse Grok's answer
+    const content = grokResponse.data?.choices?.[0]?.message?.content;
+    let parsed = {};
+    try {
+      parsed = JSON.parse(content);
+    } catch (e) {
+      parsed = { explanation: content || 'No response from Grok.' };
+    }
+    const newsapi_query = parsed.newsapi_query || {};
+    const explanation = parsed.explanation || '';
+    let newsResults = [];
+    // Fetch news if we have a query
+    if (newsapi_query.q || newsapi_query.from || newsapi_query.to || newsapi_query.sources) {
+      try {
+        const params = { apiKey: NEWS_API_KEY };
+        if (newsapi_query.q) params.q = newsapi_query.q;
+        if (newsapi_query.from) params.from = newsapi_query.from;
+        if (newsapi_query.to) params.to = newsapi_query.to;
+        if (newsapi_query.sources) params.sources = newsapi_query.sources;
+        let url = 'https://newsapi.org/v2/everything';
+        if ((!params.q || params.q.trim() === '') && !params.from && !params.to && !params.sources) {
+          url = 'https://newsapi.org/v2/top-headlines';
+          params.country = 'us';
+        }
+        const newsResp = await axios.get(url, { params });
+        newsResults = newsResp.data.articles || [];
+      } catch (err) {
+        console.error('Failed to fetch news for Grok:', err?.response?.data || err.message || err);
+      }
+    }
+    res.json({
+      response: explanation,
+      newsQuery: newsapi_query,
+      newsResults
+    });
     console.log('--- GROK PROXY DEBUG END ---');
   } catch (error) {
     console.error('Error contacting Grok:', error?.response?.data || error.message || error);

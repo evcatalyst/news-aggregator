@@ -1,13 +1,13 @@
 # News Aggregator
 
-A modern news dashboard with ag-Grid data visualization, Node.js/Express proxy, Tailwind CSS, and Docker support. Features AI-powered chat interface with Grok for intelligent news filtering and analysis.
+A modern news dashboard with Tabulator data visualization, Node.js/Express proxy, Tailwind CSS, and Docker support. Features AI-powered chat interface with Grok for intelligent news filtering and analysis.
 
 ---
 
 ## Features
 - **🔒 Secure API Proxy**: NewsAPI and xAI (Grok) proxy to keep your API keys secure
 - **🤖 AI-Powered Chat**: Grok integration for intelligent news filtering and analysis
-- **📊 Advanced Data Grid**: ag-Grid community edition for sortable, filterable news display
+- **📊 Advanced Data Grid**: Tabulator for sortable, filterable news display
 - **🎨 Modern UI**: Tailwind CSS with responsive design
 - **🐳 Dockerized**: Complete containerized development environment
 - **⚡ Hot Reload**: Docker Compose develop mode for instant code changes
@@ -17,7 +17,7 @@ A modern news dashboard with ag-Grid data visualization, Node.js/Express proxy, 
 ---
 
 ## Tech Stack
-- **Frontend**: Vanilla JavaScript, HTML5, Tailwind CSS, ag-Grid Community
+- **Frontend**: Vanilla JavaScript, HTML5, Tailwind CSS, Tabulator
 - **Backend**: Node.js, Express.js, Axios
 - **Testing**: Playwright
 - **Infrastructure**: Docker Compose, ARM64/Apple Silicon optimized
@@ -84,10 +84,8 @@ news-aggregator/
     ├── app.js                 # Application logic
     ├── tailwind.css           # Compiled Tailwind styles
     ├── input.css              # Tailwind source
-    ├── package.json           # npm dependencies (ag-Grid, Playwright)
-    ├── agGridLoad.test.js     # Integration tests
-    ├── playwright.config.js   # Test configuration
-    └── node_modules/          # Local ag-Grid installation
+    ├── package.json           # npm dependencies (Tabulator, Playwright)
+    └── node_modules/          # Local Tabulator installation
 ```
 
 ---
@@ -107,7 +105,7 @@ news-aggregator/
 - Results displayed in interactive data grid
 
 ### 📊 Advanced Data Visualization
-- **ag-Grid Community**: Professional data grid component
+- **Tabulator**: Professional data grid component
 - **Sorting**: Click column headers to sort news articles
 - **Filtering**: Built-in column filters for all data
 - **Pagination**: Handle large result sets efficiently
@@ -181,7 +179,7 @@ npm run test:debug
 
 ### Common Issues & Solutions
 
-#### ❌ ag-Grid Failed to Load
+#### ❌ Tabulator Failed to Load
 **Fixed in latest version!** We now use local npm installation instead of CDN.
 - If you still see this, run: `./proxy/rebuild_stack.sh`
 
@@ -228,11 +226,10 @@ docker compose down
 - **Improved script order**: Fixed race conditions in resource loading
 - **All tests passing**: 4/4 Playwright integration tests now pass reliably
 
-### ✅ 2025-06-08 - Enhanced Testing & Debugging
-- **Playwright integration**: Comprehensive browser-based testing
-- **Debug controls**: Frontend sidebar toggle for detailed logging
-- **Health monitoring**: Automatic service health checks in rebuild script
-- **Error boundaries**: Graceful handling of API and rendering errors
+### ✅ 2025-06-09 - Tabulator Migration & Cleanup
+- **Migrated to Tabulator**: Replaced ag-Grid with Tabulator for news table rendering
+- **Removed ag-Grid references**: Cleaned up all ag-Grid code, tests, and documentation
+- **Updated Playwright tests**: Now test Tabulator integration
 
 ---
 
@@ -245,10 +242,10 @@ flowchart TD
     Frontend -->|API Requests| Proxy[🔧 Proxy Server]
     Proxy -->|News Query| NewsAPI[📰 NewsAPI]
     Proxy -->|AI Chat| Grok[🤖 xAI Grok]
-    Frontend -->|Renders| AgGrid[📊 ag-Grid]
+    Frontend -->|Renders| Tabulator[📊 Tabulator]
     
     Frontend -.->|Local Files| CSS[🎨 Tailwind CSS]
-    Frontend -.->|Local Package| AgGrid
+    Frontend -.->|Local Package| Tabulator
 ```
 
 ### Infrastructure Architecture  
@@ -288,7 +285,7 @@ sequenceDiagram
     NewsAPI-->>Proxy: News articles JSON
     Proxy-->>Frontend: Filtered results
     
-    Frontend->>Frontend: Render in ag-Grid
+    Frontend->>Frontend: Render in Tabulator
     Frontend-->>User: Interactive news table
 ```
 
@@ -323,4 +320,17 @@ sequenceDiagram
   - frontend/index.html
   - frontend/app.js
   - frontend/agGridLoad.test.js
+  - README.md
+
+### 2025-06-09
+- **Intent:** Migrate to Tabulator and clean up ag-Grid references.
+- **Summary:**
+  - Replaced ag-Grid with Tabulator in frontend code and dependencies.
+  - Updated Playwright tests to verify Tabulator integration.
+  - Removed all ag-Grid related files, dependencies, and documentation.
+- **Files Changed:**
+  - frontend/index.html
+  - frontend/app.js
+  - frontend/package.json
+  - frontend/tabulator.test.js
   - README.md

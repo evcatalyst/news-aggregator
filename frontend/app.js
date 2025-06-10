@@ -83,27 +83,20 @@ let lastNewsData = null;
 let chatHistory = [];
 let currentUser = null;
 
-// --- ag-Grid integration ---
-// Ensure ag-Grid is loaded as a global before using
-// News loading and rendering
+// --- News loading and rendering
 async function renderNewsCard(result, idx, container) {
   try {
     // Card container
     const card = document.createElement('div');
-    card.className = 'bg-white rounded shadow p-2 mb-2 flex flex-col';
+    card.className = 'bg-white rounded shadow p-2 mb-2';
     card.style.position = 'relative';
     card.style.fontSize = '0.92em';
-    card.style.overflow = 'visible';
 
-    // Card header with rename, save, and expand/collapse actions
+    // Card header
     card.innerHTML = `
       <div class="flex items-center justify-between mb-1">
-        <div class="font-semibold text-xs" id="card-title-${idx}">${result.title || `Search #${idx + 1}`}</div>
+        <div class="font-semibold text-xs">Search #${idx + 1}</div>
         <div class="flex gap-1">
-          <button class="text-xs text-gray-500 hover:text-blue-600" data-toggle="${idx}" title="Expand/collapse grid">${result.expandedGrid ? '▴' : '▾'}</button>
-          <button class="text-xs text-blue-600 hover:underline" data-rename="${idx}" title="Rename">✏️</button>
-          <button class="text-xs text-green-600 hover:underline" data-save="${idx}" title="Save">💾</button>
-          <button class="text-xs text-purple-600 hover:underline" data-refine="${idx}" title="Refine">🔍</button>
           <button class="text-xs text-blue-600 hover:underline" data-pin="${idx}">Pin</button>
           <button class="text-xs text-red-600 hover:underline" data-remove="${idx}">Remove</button>
         </div>
@@ -114,126 +107,32 @@ async function renderNewsCard(result, idx, container) {
       card.innerHTML += `<div class="mb-1 text-gray-700 text-xs">${result.explanation}</div>`;
     }
 
-    // ag-Grid container
-    const gridDiv = document.createElement('div');
-    gridDiv.style.height = result.expandedGrid ? 'auto' : '220px';
-    gridDiv.style.minHeight = '80px';
-    gridDiv.style.overflow = 'visible';
-    gridDiv.className = 'ag-theme-alpine w-full tight-grid';
-    card.appendChild(gridDiv);
+    // Tabulator container
+    const tableDiv = document.createElement('div');
+    tableDiv.style.height = '220px';
+    tableDiv.className = 'tabulator-table w-full';
+    card.appendChild(tableDiv);
 
-    // ag-Grid columns
-    const columnDefs = [
-      { headerName: 'Title', field: 'title', flex: 3, minWidth: 120, sortable: true, filter: true, cellRenderer: params => `<a href=\"${params.data.url}\" target=\"_blank\" class=\"text-blue-700 hover:underline\">${params.value}</a>` },
-      { headerName: 'Source', field: 'source.name', flex: 1, minWidth: 60, sortable: true, filter: true },
-      { headerName: 'Published', field: 'publishedAt', flex: 0.7, minWidth: 80, maxWidth: 110, sortable: true, filter: 'agDateColumnFilter', valueFormatter: p => {
-        if (!p.value) return '';
-        const d = new Date(p.value);
-        // Format: 'Jun 8, 14:23'
-        return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
-      } },
-      { headerName: 'Description', field: 'description', flex: 4, minWidth: 140, sortable: false, filter: true }
+    // Tabulator columns
+    const columns = [
+      { title: 'Title', field: 'title', widthGrow: 2, formatter: (cell) => `<a href="${cell.getRow().getData().url}" target="_blank" class="text-blue-700 hover:underline">${cell.getValue()}</a>` },
+      { title: 'Source', field: 'source.name', widthGrow: 1 },
+      { title: 'Published', field: 'publishedAt', widthGrow: 1, formatter: (cell) => cell.getValue() ? new Date(cell.getValue()).toLocaleString() : '' },
+      { title: 'Description', field: 'description', widthGrow: 3 }
     ];
 
-    // Initialize ag-Grid
+    // Initialize Tabulator
     try {
-      if (gridDiv.__agGridInstance) {
-        gridDiv.__agGridInstance.destroy();
-        gridDiv.innerHTML = '';
-      }
-      const rowData = Array.isArray(result.articles) ? result.articles : [];
-      const gridOptions = {
-        columnDefs,
-        rowData,
-        domLayout: 'autoHeight',
-        suppressHorizontalScroll: false,
-        defaultColDef: { resizable: true, filter: true, sortable: true, cellStyle: { fontSize: '11px', padding: '2px 4px' } },
-        getRowStyle: () => ({ fontSize: '11px', padding: '2px 4px', lineHeight: '1.2' }),
-        headerHeight: 26,
-        rowHeight: 22,
-        pagination: !result.expandedGrid,
-        paginationPageSize: 8,
-        onGridReady: params => {
-          params.api.sizeColumnsToFit();
-          setTimeout(() => { card.style.width = gridDiv.offsetWidth + 'px'; }, 0);
-        }
-      };
-      const agGridGlobal = window.agGrid || window.agGridCommunity || agGrid;
-      gridDiv.__agGridInstance = agGridGlobal.createGrid(gridDiv, gridOptions);
-      gridDiv.querySelectorAll('.ag-root, .ag-header-cell, .ag-cell').forEach(el => {
-        el.style.fontSize = '11px';
-        el.style.padding = '2px 4px';
-        el.style.lineHeight = '1.2';
+      new Tabulator(tableDiv, {
+        data: result.articles,
+        columns: columns,
+        layout: 'fitColumns',
+        height: 200,
+        responsiveLayout: true,
       });
     } catch (err) {
-      gridDiv.innerHTML = `<div class=\"bg-red-50 border border-red-200 text-red-700 px-2 py-2 rounded\"><p class=\"font-bold\">Failed to load news grid</p><p>${err.message}</p></div>`;
+      tableDiv.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 px-2 py-2 rounded"><p class="font-bold">Failed to load news table</p><p>${err.message}</p></div>`;
     }
-
-    // Card search attributes (low profile, small text at bottom)
-    const attrDiv = document.createElement('div');
-    attrDiv.className = 'mt-1 text-[10px] text-gray-400 flex flex-wrap gap-2';
-    const params = result.params || {};
-    attrDiv.innerHTML = Object.entries(params).map(([k, v]) => v ? `<span><b>${k}:</b> ${v}</span>` : '').join(' ');
-    card.appendChild(attrDiv);
-
-    // Action handlers (rename, save, refine, toggle)
-    setTimeout(() => {
-      // Rename
-      const renameBtn = card.querySelector(`[data-rename='${idx}']`);
-      if (renameBtn) {
-        renameBtn.onclick = () => {
-          const titleDiv = card.querySelector(`#card-title-${idx}`);
-          const current = titleDiv.textContent;
-          const input = document.createElement('input');
-          input.type = 'text';
-          input.value = current;
-          input.className = 'border rounded px-1 text-xs';
-          input.onkeydown = e => {
-            if (e.key === 'Enter') {
-              result.title = input.value;
-              titleDiv.textContent = input.value;
-            }
-          };
-          input.onblur = () => {
-            result.title = input.value;
-            titleDiv.textContent = input.value;
-          };
-          titleDiv.textContent = '';
-          titleDiv.appendChild(input);
-          input.focus();
-        };
-      }
-      // Save
-      const saveBtn = card.querySelector(`[data-save='${idx}']`);
-      if (saveBtn) {
-        saveBtn.onclick = () => {
-          let saved = JSON.parse(localStorage.getItem('savedCards') || '[]');
-          saved = saved.filter(c => c.fetchedAt !== result.fetchedAt); // avoid dupes
-          saved.unshift(result);
-          localStorage.setItem('savedCards', JSON.stringify(saved));
-          saveBtn.textContent = '✅';
-          setTimeout(() => { saveBtn.textContent = '💾'; }, 1200);
-        };
-      }
-      // Refine
-      const refineBtn = card.querySelector(`[data-refine='${idx}']`);
-      if (refineBtn) {
-        refineBtn.onclick = () => {
-          // Pre-fill sidebar input with current params for user to edit
-          const sidebarInput = document.getElementById('grok-input');
-          sidebarInput.value = `Refine card: ${result.title || `Search #${idx + 1}`}. Current search: ${JSON.stringify(params)}`;
-          sidebarInput.focus();
-        };
-      }
-      // Toggle expand/collapse
-      const toggleBtn = card.querySelector(`[data-toggle='${idx}']`);
-      if (toggleBtn) {
-        toggleBtn.onclick = () => {
-          result.expandedGrid = !result.expandedGrid;
-          renderNewsCards();
-        };
-      }
-    }, 0);
 
     container.appendChild(card);
   } catch (err) {
@@ -450,63 +349,38 @@ window.onload = async () => {
 
 // After Grok/LLM response, check if a new card was created and show confirmation
 async function askGrok() {
-  const input = document.getElementById('grok-input').value.trim();
-  const responseDiv = document.getElementById('grok-response');
-  if (!input) {
-    responseDiv.textContent = 'Please enter a question.';
+  const inputElem = document.getElementById('grok-input');
+  const responseElem = document.getElementById('grok-response');
+  const prompt = inputElem.value.trim();
+  if (!prompt) {
+    responseElem.textContent = 'Please enter a question.';
     return;
   }
-  AppState.isLoading = true;
-  updateUIState();
-  responseDiv.textContent = '';
+  responseElem.textContent = 'Thinking...';
+  inputElem.disabled = true;
   const prevCardCount = AppState.searchResults.length;
   try {
-    // Call backend LLM (Grok) endpoint
+    const token = localStorage.getItem('token');
     const res = await fetch('http://localhost:3000/grok', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': localStorage.getItem('token') || '' },
-      body: JSON.stringify({ prompt: input })
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': token } : {})
+      },
+      body: JSON.stringify({ prompt })
     });
-    if (!res.ok) throw new Error('Grok API error');
+    if (!res.ok) throw new Error('Grok request failed');
     const data = await res.json();
-    let explanation = '';
-    let newsapiQuery = null;
-    // --- PATCH: Handle Grok returning JSON as a string in choices[0].message.content ---
-    if (data.choices && data.choices[0]?.message?.content) {
-      try {
-        const parsed = JSON.parse(data.choices[0].message.content);
-        explanation = parsed.explanation || '';
-        newsapiQuery = parsed.newsapi_query || parsed.query || null;
-      } catch (err) {
-        debugLog('Failed to parse Grok content as JSON:', err, data.choices[0].message.content);
-        explanation = data.choices[0].message.content || '';
-      }
-    } else {
-      // fallback to old structure
-      explanation = data.explanation || '';
-      newsapiQuery = data.newsapi_query || data.query || null;
-      if (!newsapiQuery && data && typeof data === 'object') {
-        for (const k of Object.keys(data)) {
-          if (k.toLowerCase().includes('query')) newsapiQuery = data[k];
-        }
-      }
+    // Assume response: { response: string, newsResults?: [...] }
+    AppState.chatHistory.push({ input: prompt, response: data.response });
+    if (data.newsResults && Array.isArray(data.newsResults)) {
+      AppState.searchResults.push({ articles: data.newsResults, explanation: data.response });
+      updateUIState();
     }
-    if (newsapiQuery) {
-      const params = typeof newsapiQuery === 'string' ? { q: newsapiQuery } : newsapiQuery;
-      await fetchNewsWithParams(params, explanation);
-      responseDiv.textContent = explanation || 'Showing filtered news...';
-    } else {
-      responseDiv.textContent = 'No machine-readable news query found.';
-    }
-    AppState.chatHistory.push({ input, response: explanation || '...' });
-    localStorage.setItem('chatHistory', JSON.stringify(AppState.chatHistory));
     renderSidebar();
-  } catch (e) {
-    responseDiv.textContent = 'Error contacting Grok.';
-    debugLog('Grok error:', e);
-  } finally {
-    AppState.isLoading = false;
-    updateUIState();
+    responseElem.textContent = '';
+    inputElem.value = '';
+    // Show confirmation if new card created
     setTimeout(() => {
       if (AppState.searchResults.length > prevCardCount) {
         const sidebar = document.getElementById('sidebar');
@@ -519,42 +393,9 @@ async function askGrok() {
         }
       }
     }, 1000);
-  }
-}
-
-// Fetch news from backend and update state
-async function fetchNewsWithParams(params, explanation = '') {
-  AppState.isLoading = true;
-  AppState.hasError = false;
-  AppState.errorMessage = '';
-  updateUIState();
-  lastOperation = async () => fetchNewsWithParams(params, explanation);
-  try {
-    // Build query string
-    const query = new URLSearchParams(params).toString();
-    const res = await fetch(`http://localhost:3000/news?${query}`, {
-      headers: { 'Authorization': localStorage.getItem('token') || '' }
-    });
-    if (!res.ok) throw new Error('Failed to fetch news');
-    const data = await res.json();
-    // Attach explanation to result for card display
-    const card = {
-      articles: data.articles || [],
-      explanation: explanation || '',
-      params: params,
-      fetchedAt: new Date().toISOString()
-    };
-    AppState.searchResults.unshift(card);
-    // Limit to last 10 cards
-    if (AppState.searchResults.length > 10) AppState.searchResults.length = 10;
-    AppState.isLoading = false;
-    AppState.hasError = false;
-    updateUIState();
   } catch (err) {
-    AppState.isLoading = false;
-    AppState.hasError = true;
-    AppState.errorMessage = err.message || 'Unknown error fetching news';
-    updateUIState();
-    debugLog('fetchNewsWithParams error:', err);
+    responseElem.textContent = 'Error: ' + err.message;
+  } finally {
+    inputElem.disabled = false;
   }
 }
