@@ -215,6 +215,19 @@ docker compose down
 
 ---
 
+## Known Issues (2025-06-10)
+
+- New cards are sometimes not created for certain queries (e.g. 'cats'), or all new searches are added to the same table/card.
+- There is no clear local log of card creation events, making debugging difficult. Debug logging has now been added to `ChatSidebar.jsx`.
+- Pagination controls at the bottom of the table can be cut off depending on card/table height.
+- See `BUGLOG.md` for more details and reproduction steps.
+
+## Debugging Tips
+- Open the browser console and look for `[ChatSidebar]` logs to trace card creation attempts/results.
+- If a card is not created, check the API response and the debug logs for clues.
+
+---
+
 ## Recent Updates & Fixes
 
 ### ✅ 2025-06-08 - ag-Grid Reliability & Docker Credential Fix
@@ -334,3 +347,5 @@ sequenceDiagram
   - frontend/package.json
   - frontend/tabulator.test.js
   - README.md
+
+**Note:** You may see a pre-commit warning about a potential secret (`testpass`) in `frontend/app.js`. This is a demo/test value and not a real password or secret. It is safe to ignore this warning for development.

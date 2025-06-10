@@ -2,18 +2,25 @@
   "name": "frontend",
   "version": "1.0.0",
   "scripts": {
-    "dev": "npx http-server . -p 8080",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "test": "npx playwright test",
     "test:headed": "npx playwright test --headed",
     "test:debug": "npx playwright test --debug",
     "test:install": "npx playwright install chromium"
   },
   "devDependencies": {
-    "tailwindcss": "^3.4.13",
+    "@playwright/test": "^1.43.1",
+    "@vitejs/plugin-react": "^4.5.2",
     "http-server": "^14.1.1",
-    "@playwright/test": "^1.43.1"
+    "tailwindcss": "^3.4.13",
+    "vite": "^4.0.0"
   },
   "dependencies": {
-    "ag-grid-community": "^31.2.1"
+    "daisyui": "^5.0.43",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tabulator-tables": "^6.3.0"
   }
 }

@@ -1,0 +1,316 @@
+[INFO] Using 'docker compose' command.
+
+[1;33m==> Stopping and removing Docker Compose containers...[0m
+ Container news-aggregator-frontend-1  Stopping
+ Container news-aggregator-frontend-1  Stopped
+ Container news-aggregator-frontend-1  Removing
+ Container news-aggregator-frontend-1  Removed
+ Container news-aggregator-proxy-1  Stopping
+ Container news-aggregator-proxy-1  Stopped
+ Container news-aggregator-proxy-1  Removing
+ Container news-aggregator-proxy-1  Removed
+ Network news-aggregator_default  Removing
+ Network news-aggregator_default  Removed
+
+[1;33m==> Cleaning node_modules...[0m
+
+[1;33m==> Installing proxy dependencies...[0m
+
+added 81 packages, and audited 82 packages in 2s
+
+17 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+
+[1;33m==> Installing frontend dependencies...[0m
+
+added 231 packages, and audited 232 packages in 7s
+
+48 packages are looking for funding
+  run `npm fund` for details
+
+2 moderate severity vulnerabilities
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+
+[1;33m==> Building Tailwind CSS...[0m
+
+Rebuilding...
+
+Done in 115ms.
+
+[1;33m==> Building frontend (Vite)...[0m
+
+> frontend@1.0.0 build
+> vite build
+
+vite v4.5.14 building for production...
+transforming...
+✓ 41 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.97 kB │ gzip:   0.50 kB
+dist/assets/index-ece4ace0.css   52.34 kB │ gzip:   8.87 kB
+dist/assets/index-e9a34b16.js   604.09 kB │ gzip: 154.78 kB
+
+(!) Some chunks are larger than 500 kBs after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 764ms
+
+[1;33m==> Building frontend Docker image...[0m
+Compose can now delegate builds to bake for better performance.
+ To do so, set COMPOSE_BAKE=true.
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [frontend internal] load build definition from Dockerfile
+#1 transferring dockerfile: 269B done
+#1 DONE 0.0s
+
+#2 [frontend internal] load metadata for docker.io/library/node:18.20.8-alpine
+#2 ...
+
+#3 [frontend auth] library/node:pull token for registry-1.docker.io
+#3 DONE 0.0s
+
+#2 [frontend internal] load metadata for docker.io/library/node:18.20.8-alpine
+#2 DONE 0.7s
+
+#4 [frontend internal] load .dockerignore
+#4 transferring context: 67B done
+#4 DONE 0.0s
+
+#5 [frontend 1/6] FROM docker.io/library/node:18.20.8-alpine@sha256:8d6421d663b4c28fd3ebc498332f249011d118945588d0a35cb9bc4b8ca09d9e
+#5 resolve docker.io/library/node:18.20.8-alpine@sha256:8d6421d663b4c28fd3ebc498332f249011d118945588d0a35cb9bc4b8ca09d9e 0.0s done
+#5 DONE 0.0s
+
+#6 [frontend internal] load build context
+#6 transferring context: 780.19kB 0.0s done
+#6 DONE 0.0s
+
+#7 [frontend 2/6] WORKDIR /app
+#7 CACHED
+
+#8 [frontend 3/6] COPY package*.json ./
+#8 CACHED
+
+#9 [frontend 4/6] RUN npm cache clean --force && npm install && npm install --save-dev autoprefixer
+#9 CACHED
+
+#10 [frontend 5/6] COPY . .
+#10 DONE 0.0s
+
+#11 [frontend 6/6] RUN npm run build
+#11 0.426 
+#11 0.426 > frontend@1.0.0 build
+#11 0.426 > vite build
+#11 0.426 
+#11 0.799 vite v4.5.14 building for production...
+#11 0.819 transforming...
+#11 1.086 /*! 🌼 daisyUI 5.0.43 */
+#11 2.061 ✓ 41 modules transformed.
+#11 2.195 rendering chunks...
+#11 2.201 computing gzip size...
+#11 2.212 dist/index.html                   0.97 kB │ gzip:   0.51 kB
+#11 2.212 dist/assets/index-ece4ace0.css   52.34 kB │ gzip:   8.87 kB
+#11 2.212 dist/assets/index-e9a34b16.js   604.09 kB │ gzip: 154.96 kB
+#11 2.212 
+#11 2.212 (!) Some chunks are larger than 500 kBs after minification. Consider:
+#11 2.212 - Using dynamic import() to code-split the application
+#11 2.212 - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+#11 2.212 - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+#11 2.213 ✓ built in 1.41s
+#11 DONE 2.2s
+
+#12 [frontend] exporting to image
+#12 exporting layers 0.0s done
+#12 exporting manifest sha256:72bdcdf11b44fa432946fa445681c2e87df4fdd00f87662d8c525e0c85d3e7c2
+#12 exporting manifest sha256:72bdcdf11b44fa432946fa445681c2e87df4fdd00f87662d8c525e0c85d3e7c2 done
+#12 exporting config sha256:8141a304d553b8689fd9f799f0b216628481fbb645351c4397b4be62ab82365e done
+#12 exporting attestation manifest sha256:0e81474ac82e7a19b52dd3e371f5c2f570734e949319769f875196ea923c91bf done
+#12 exporting manifest list sha256:7b1a8be30ac3014b42d5f1297f6d28e40669adad47d3bfcc776bffcf14947284 done
+#12 naming to docker.io/library/news-aggregator-frontend:latest done
+#12 unpacking to docker.io/library/news-aggregator-frontend:latest 0.0s done
+#12 DONE 0.1s
+
+#13 [frontend] resolving provenance for metadata file
+#13 DONE 0.0s
+ frontend  Built
+
+[1;33m==> Building proxy Docker image...[0m
+Compose can now delegate builds to bake for better performance.
+ To do so, set COMPOSE_BAKE=true.
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [proxy internal] load build definition from Dockerfile
+#1 transferring dockerfile: 189B done
+#1 DONE 0.0s
+
+#2 [proxy internal] load metadata for docker.io/library/node:18.20.8-alpine
+#2 DONE 0.1s
+
+#3 [proxy internal] load .dockerignore
+#3 transferring context: 67B done
+#3 DONE 0.0s
+
+#4 [proxy internal] load build context
+#4 transferring context: 51.15kB done
+#4 DONE 0.0s
+
+#5 [proxy 1/5] FROM docker.io/library/node:18.20.8-alpine@sha256:8d6421d663b4c28fd3ebc498332f249011d118945588d0a35cb9bc4b8ca09d9e
+#5 resolve docker.io/library/node:18.20.8-alpine@sha256:8d6421d663b4c28fd3ebc498332f249011d118945588d0a35cb9bc4b8ca09d9e 0.0s done
+#5 DONE 0.0s
+
+#6 [proxy 3/5] COPY package*.json ./
+#6 CACHED
+
+#7 [proxy 2/5] WORKDIR /app
+#7 CACHED
+
+#8 [proxy 4/5] RUN npm cache clean --force && npm install
+#8 CACHED
+
+#9 [proxy 5/5] COPY . .
+#9 DONE 0.0s
+
+#10 [proxy] exporting to image
+#10 exporting layers 0.0s done
+#10 exporting manifest sha256:6bdb0996f2ace2aa48a77448692235cab4adfb562015710ef80aae19bde95be0 done
+#10 exporting config sha256:2056a8203aa3226fa3c434b38e252f92cb001eab46b86963c903cfcc85ea9cad done
+#10 exporting attestation manifest sha256:36f1441db27e3c2097822575cc4874c53b3a8e013460b1ac3ae4cfdf82b742f3 done
+#10 exporting manifest list sha256:5f12db1967c43c27d689ca69b4e8541eed2c36b2a872ff3b78bb77f2a831e45e done
+#10 naming to docker.io/library/news-aggregator-proxy:latest done
+#10 unpacking to docker.io/library/news-aggregator-proxy:latest done
+#10 DONE 0.0s
+
+#11 [proxy] resolving provenance for metadata file
+#11 DONE 0.0s
+ proxy  Built
+
+[1;33m==> Rebuilding and starting Docker Compose in background...[0m
+Compose can now delegate builds to bake for better performance.
+ To do so, set COMPOSE_BAKE=true.
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [proxy internal] load build definition from Dockerfile
+#1 transferring dockerfile: 189B done
+#1 DONE 0.0s
+
+#2 [proxy internal] load metadata for docker.io/library/node:18.20.8-alpine
+#2 DONE 0.1s
+
+#3 [proxy internal] load .dockerignore
+#3 transferring context: 67B done
+#3 DONE 0.0s
+
+#4 [proxy internal] load build context
+#4 transferring context: 7.62kB done
+#4 DONE 0.0s
+
+#5 [proxy 1/5] FROM docker.io/library/node:18.20.8-alpine@sha256:8d6421d663b4c28fd3ebc498332f249011d118945588d0a35cb9bc4b8ca09d9e
+#5 resolve docker.io/library/node:18.20.8-alpine@sha256:8d6421d663b4c28fd3ebc498332f249011d118945588d0a35cb9bc4b8ca09d9e done
+#5 DONE 0.0s
+
+#6 [proxy 3/5] COPY package*.json ./
+#6 CACHED
+
+#7 [proxy 2/5] WORKDIR /app
+#7 CACHED
+
+#8 [proxy 4/5] RUN npm cache clean --force && npm install
+#8 CACHED
+
+#9 [proxy 5/5] COPY . .
+#9 DONE 0.0s
+
+#10 [proxy] exporting to image
+#10 exporting layers 0.0s done
+#10 exporting manifest sha256:fa275d8319709414bfc778f1583f351bea819260351a8771a76eefc20a3ed8cd done
+#10 exporting config sha256:1681d04542538b599ab1faf8970caf52ecbfd82805113967090beb85c0db4afa done
+#10 naming to docker.io/library/news-aggregator-proxy:latest done
+#10 unpacking to docker.io/library/news-aggregator-proxy:latest done
+#10 DONE 0.0s
+
+#11 [proxy] resolving provenance for metadata file
+#11 DONE 0.0s
+
+#12 [frontend internal] load build definition from Dockerfile
+#12 transferring dockerfile: 269B done
+#12 DONE 0.0s
+
+#2 [frontend internal] load metadata for docker.io/library/node:18.20.8-alpine
+#2 DONE 0.3s
+
+#13 [frontend internal] load .dockerignore
+#13 transferring context: 67B done
+#13 DONE 0.0s
+
+#5 [frontend 1/6] FROM docker.io/library/node:18.20.8-alpine@sha256:8d6421d663b4c28fd3ebc498332f249011d118945588d0a35cb9bc4b8ca09d9e
+#5 resolve docker.io/library/node:18.20.8-alpine@sha256:8d6421d663b4c28fd3ebc498332f249011d118945588d0a35cb9bc4b8ca09d9e done
+#5 DONE 0.0s
+
+#14 [frontend internal] load build context
+#14 transferring context: 1.41kB done
+#14 DONE 0.0s
+
+#15 [frontend 4/6] RUN npm cache clean --force && npm install && npm install --save-dev autoprefixer
+#15 CACHED
+
+#16 [frontend 3/6] COPY package*.json ./
+#16 CACHED
+
+#7 [frontend 2/6] WORKDIR /app
+#7 CACHED
+
+#17 [frontend 5/6] COPY . .
+#17 CACHED
+
+#18 [frontend 6/6] RUN npm run build
+#18 CACHED
+
+#19 [frontend] exporting to image
+#19 exporting layers done
+#19 exporting manifest sha256:86f6a0fd36b3b6efa656081d75c87324dc7f0fbc9bbd4d83bafb39986e49f57e done
+#19 exporting config sha256:8141a304d553b8689fd9f799f0b216628481fbb645351c4397b4be62ab82365e done
+#19 naming to docker.io/library/news-aggregator-frontend:latest done
+#19 unpacking to docker.io/library/news-aggregator-frontend:latest done
+#19 DONE 0.0s
+
+#20 [frontend] resolving provenance for metadata file
+#20 DONE 0.0s
+ frontend  Built
+ proxy  Built
+ Network news-aggregator_default  Creating
+ Network news-aggregator_default  Created
+ Container news-aggregator-proxy-1  Creating
+ Container news-aggregator-proxy-1  Created
+ Container news-aggregator-frontend-1  Creating
+ Container news-aggregator-frontend-1  Created
+ Container news-aggregator-proxy-1  Starting
+ Container news-aggregator-proxy-1  Started
+ Container news-aggregator-frontend-1  Starting
+ Container news-aggregator-frontend-1  Started
+
+[1;33m==> Skipping log tailing (NOTAIL=true)...[0m
+
+[1;33m==> Checking Proxy API health at http://localhost:3000/health...[0m
+Attempt 1/10 - Proxy API not ready, waiting 3s...
+[0;32m✓ Proxy API is healthy[0m
+
+[1;33m==> Checking Frontend health at http://localhost:5173...[0m
+Attempt 1/10 - Frontend not ready, waiting 3s...
+Attempt 2/10 - Frontend not ready, waiting 3s...
+Attempt 3/10 - Frontend not ready, waiting 3s...
+Attempt 4/10 - Frontend not ready, waiting 3s...
+Attempt 5/10 - Frontend not ready, waiting 3s...
+Attempt 6/10 - Frontend not ready, waiting 3s...
+Attempt 7/10 - Frontend not ready, waiting 3s...
+Attempt 8/10 - Frontend not ready, waiting 3s...
+Attempt 9/10 - Frontend not ready, waiting 3s...
+Attempt 10/10 - Frontend not ready, waiting 3s...
+[0;31m✗ Frontend failed health check[0m

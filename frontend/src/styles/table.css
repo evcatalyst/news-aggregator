@@ -1,0 +1,152 @@
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap');
+
+* {
+  box-sizing: border-box;
+}
+
+.tabulator {
+  font-family: 'Open Sans', sans-serif;
+  font-size: 12px;
+  background: #252526;
+  border-collapse: collapse;
+  border: 1px solid #4b5563;
+}
+
+.tabulator .tabulator-header {
+  background: #374151;
+  color: #d4d4d4;
+  border-bottom: 2px solid #d4d4d4;
+}
+
+.tabulator .tabulator-header .tabulator-col {
+  font-weight: 600;
+  padding: 1.5px;
+  border-right: 1px solid #4b5563;
+  text-align: left;
+}
+
+.tabulator .tabulator-header .tabulator-col.tabulator-sortable:hover {
+  background: #4b5563;
+  color: #f4d03f;
+  cursor: pointer;
+}
+
+.tabulator .tabulator-tableholder .tabulator-table {
+  color: #d4d4d4;
+}
+
+.tabulator .tabulator-row {
+  border-bottom: 1px solid #4b5563;
+  transition: background 0.15s, color 0.15s;
+  height: 24px;
+}
+
+.tabulator .tabulator-row:hover {
+  background: #4b5563;
+  color: #f4d03f;
+}
+
+.tabulator .tabulator-row.category-tech {
+  border-left: 2px solid #3b82f6;
+}
+.tabulator .tabulator-row.category-sports {
+  border-left: 2px solid #10b981;
+}
+.tabulator .tabulator-row.category-entertainment {
+  border-left: 2px solid #ef4444;
+}
+.tabulator .tabulator-row.category-other {
+  border-left: 2px solid #6b7280;
+}
+
+.tabulator .tabulator-cell {
+  padding: 1.5px;
+  font-size: 12px;
+  border: 1px solid #4b5563;
+}
+.tabulator .tabulator-cell:not(:first-child) {
+  text-align: right;
+}
+
+.tabulator .tabulator-cell .action-btn {
+  font-size: 12px;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #4b5563;
+  background: none;
+  border-radius: 2px;
+  margin-right: 2px;
+}
+.tabulator .tabulator-cell .action-btn.pin {
+  color: #3b82f6;
+}
+.tabulator .tabulator-cell .action-btn.pin:hover {
+  background: #1e40af;
+  color: #dbeafe;
+}
+.tabulator .tabulator-cell .action-btn.remove {
+  color: #ef4444;
+}
+.tabulator .tabulator-cell .action-btn.remove:hover {
+  background: #991b1b;
+  color: #fee2e2;
+}
+
+.tabulator .tabulator-footer {
+  padding: 0;
+  background: #374151;
+  border-top: 2px solid #6b7280;
+  height: 12px;
+}
+.tabulator .tabulator-footer .tabulator-paginator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1px;
+  height: 12px;
+}
+.tabulator .tabulator-footer .tabulator-page {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: #6b7280;
+  transition: all 0.2s;
+  min-width: 0;
+  padding: 0;
+}
+.tabulator .tabulator-footer .tabulator-page.active {
+  background: #f4d03f;
+  width: 8px;
+  height: 8px;
+}
+.tabulator .tabulator-footer .tabulator-page[data-page="prev"],
+.tabulator .tabulator-footer .tabulator-page[data-page="next"] {
+  width: auto;
+  padding: 0 4px;
+  font-size: 10px;
+  color: #d4d4d4;
+  background: transparent;
+  border: none;
+}
+.tabulator .tabulator-loading {
+  text-align: center;
+  padding: 8px;
+  color: #3b82f6;
+}
+.tabulator .tabulator-error {
+  text-align: center;
+  padding: 8px;
+  color: #ef4444;
+}
+@media (max-width: 640px) {
+  .tabulator .tabulator-header .tabulator-col {
+    font-size: 10px;
+    padding: 1px;
+  }
+  .tabulator .tabulator-cell {
+    font-size: 10px;
+    padding: 1px;
+  }
+  .tabulator .tabulator-row {
+    height: 20px;
+  }
+}

@@ -48,15 +48,22 @@
       layout: "fitColumns",
       pagination: "local",
       paginationSize: 8,
+      responsiveLayout: true,
+      headerSort: true,
       columns: [
         {title: "Title", field: "title", formatter: function(cell, data) { 
           const row = cell.getRow().getData();
-          return `<a href='${row.url}' target='_blank' style='color:#2563eb;text-decoration:underline;'>${cell.getValue()}</a>`;
+          return `<a href='${row.url}' target='_blank' class='text-blue-700 hover:underline'>${cell.getValue()}</a>`;
         }, widthGrow: 3, minWidth: 120 },
-        {title: "Source", field: "source.name", width: 90, minWidth: 60},
-        {title: "Published", field: "publishedAt", formatter: function(cell) { return formatDate(cell.getValue()); }, width: 110 },
+        {title: "Source", field: "source.name", width: 90, minWidth: 60, headerSort: true, headerSortTristate: true, headerTooltip: "News Source"},
+        {title: "Published", field: "publishedAt", formatter: function(cell) { return formatDate(cell.getValue()); }, width: 110, headerSort: true },
         {title: "Description", field: "description", widthGrow: 4, minWidth: 140 }
-      ]
+      ],
+      rowFormatter: function(row) {
+        row.getElement().classList.add('bg-base-100', 'hover:bg-base-200', 'dark:bg-gray-800', 'dark:hover:bg-gray-700');
+      },
+      headerVisible: true,
+      tooltips: true,
     });
   </script>
 </body>

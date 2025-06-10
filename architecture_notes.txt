@@ -61,11 +61,27 @@ Key Fixes Applied:
 
 # Architecture Notes (June 2025)
 
-- **Grid Solution:** Tabulator is the canonical data grid for all news table rendering. ag-Grid is fully removed.
-- **Entry Point:** `app.js` is the only supported frontend entry point. `app_enhanced.js` is archived for historical reference.
-- **Modularization:** Main app logic is split into `app.js`, `state.js`, `ui.js`, `api.js`, and `utils.js` for maintainability.
-- **Testing:** Playwright tests target Tabulator and chat/news card flow (`tabulator.test.js`).
+## Current Architecture
+- **Grid Solution:** Tabulator is the canonical data grid for all news table rendering. ag-Grid is fully removed. (Project migration, June 2025)
+- **Entry Point:** `app.js` is the only supported frontend entry point. `app_enhanced.js` is archived for historical reference. (Project migration, June 2025)
+- **Modularization:** Main app logic is split into `app.js`, `state.js`, `ui.js`, `api.js`, and `utils.js` for maintainability. (Project refactor, June 2025)
+- **Testing:** Playwright tests target Tabulator and chat/news card flow (`tabulator.test.js`). (Testing update, June 2025)
 - **Proxy/Backend:**
-  - `/grok` endpoint receives a user prompt, sends it to xAI Grok, parses the structured JSON response, and fetches news from NewsAPI using the generated query. The response to the frontend includes the explanation, the query, and the news results.
-  - `/news` endpoint provides direct NewsAPI access for custom queries.
-  - All legacy ag-Grid and obsolete files have been removed for a clean, modern codebase.
+  - `/grok` endpoint receives a user prompt, sends it to xAI Grok, parses the structured JSON response, and fetches news from NewsAPI using the generated query. The response to the frontend includes the explanation, the query, and the news results. (Backend update, June 2025)
+  - `/news` endpoint provides direct NewsAPI access for custom queries. (Backend update, June 2025)
+  - All legacy ag-Grid and obsolete files have been removed for a clean, modern codebase. (Cleanup, June 2025)
+
+## Ongoing & Long-Term Guiding Principles
+- **Accessibility:** All UI components must be accessible (keyboard navigation, ARIA, high contrast). Run Lighthouse/axe audits regularly. (W3C/WCAG, Project Plan, June 2025)
+- **Design System:** Use DaisyUI/Flowbite for rapid, consistent UI development. Maintain a Figma file and Storybook for design-dev collaboration. (Project Plan, June 2025)
+- **Theming & Whitelabel:** Support light/dark mode (Tailwind `dark:`), and prepare for whitelabeling with CSS variables for colors/logos. (Project Plan, June 2025)
+- **Error Handling & Analytics:** Surface backend errors in the UI (SweetAlert2/DaisyUI alerts). Use Sentry for error logging and Google Analytics for user tracking. (Project Plan, June 2025)
+- **Testing & Quality:** Expand automated testing (Jest/Supertest for API, Playwright for UI, contract tests with Pact). Enforce pre-commit/CI checks for secrets, linting, and tests. (Project Plan, June 2025)
+- **Performance:** For large datasets, use server-side pagination/infinite scroll. Monitor frontend performance with Web Vitals. (Project Plan, June 2025)
+- **Security:** Use a secrets manager (e.g., Doppler) for production. Add rate limiting (express-rate-limit) and input validation (Joi) to backend. (Project Plan, June 2025)
+- **Documentation & Community:** Keep all docs up to date. Draft and maintain `CONTRIBUTING.md` for open source contributions. (Project Plan, June 2025)
+- **User Feedback Loop:** After major design changes, conduct user testing and iterate based on feedback. (Project Plan, June 2025)
+- **API Versioning:** As new features are added, consider versioning backend APIs for future-proofing. (Project Plan, June 2025)
+
+---
+*Sources: Project migration and planning notes (June 2025), W3C/WCAG guidelines, DaisyUI/Flowbite docs, Sentry, Google Analytics, Lighthouse, axe, Web Vitals, Doppler, express-rate-limit, Joi, Playwright, Jest, Pact, Figma, Storybook, and user/agent feedback.*

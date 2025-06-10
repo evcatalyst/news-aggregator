@@ -12,6 +12,7 @@ const AppState = {
 // Show loading/error states
 function updateUIState() {
   const newsDiv = document.getElementById('news');
+  renderNewsViewToggle();
   if (!newsDiv) return;
 
   if (AppState.isLoading) {
@@ -40,7 +41,11 @@ function updateUIState() {
     return;
   }
 
-  renderNewsCards();
+  if (newsViewMode === 'paginated') {
+    renderNewsTablePaginated();
+  } else {
+    renderNewsCards();
+  }
 }
 
 // Cache for news results
@@ -91,11 +96,15 @@ async function renderNewsCard(result, idx, container) {
     card.className = 'bg-white rounded shadow p-2 mb-2';
     card.style.position = 'relative';
     card.style.fontSize = '0.92em';
+    
+    // Set a data attribute for the card ID to help with event handling
+    card.dataset.cardId = result.id || idx;
 
-    // Card header
+    // Card header with a more descriptive title
+    const cardTitle = result.title || `Search #${idx + 1}`;
     card.innerHTML = `
       <div class="flex items-center justify-between mb-1">
-        <div class="font-semibold text-xs">Search #${idx + 1}</div>
+        <div class="font-semibold text-xs">${cardTitle}</div>
         <div class="flex gap-1">
           <button class="text-xs text-blue-600 hover:underline" data-pin="${idx}">Pin</button>
           <button class="text-xs text-red-600 hover:underline" data-remove="${idx}">Remove</button>
@@ -103,34 +112,84 @@ async function renderNewsCard(result, idx, container) {
       </div>`;
 
     // Explanation (if any)
-    if (result.explanation) {
-      card.innerHTML += `<div class="mb-1 text-gray-700 text-xs">${result.explanation}</div>`;
+    if (result.explanation || result.summary) {
+      const explanation = result.explanation || result.summary;
+      card.innerHTML += `<div class="mb-1 text-gray-700 text-xs">${explanation}</div>`;
     }
 
     // Tabulator container
     const tableDiv = document.createElement('div');
-    tableDiv.style.height = '220px';
+    tableDiv.style.height = '270px'; // Increased height for pagination
+    // Add extra bottom margin to card for pagination controls
+    card.style.marginBottom = '2.5rem';
     tableDiv.className = 'tabulator-table w-full';
     card.appendChild(tableDiv);
 
-    // Tabulator columns
+    // Make sure we have articles and they're in an array
+    const articles = Array.isArray(result.articles) ? result.articles : [];
+    
+    if (articles.length === 0) {
+      tableDiv.innerHTML = '<div class="p-2 text-gray-500">No articles found</div>';
+      container.appendChild(card);
+      return;
+    }
+
+    // Tabulator columns - adapt based on the article structure
     const columns = [
-      { title: 'Title', field: 'title', widthGrow: 2, formatter: (cell) => `<a href="${cell.getRow().getData().url}" target="_blank" class="text-blue-700 hover:underline">${cell.getValue()}</a>` },
-      { title: 'Source', field: 'source.name', widthGrow: 1 },
-      { title: 'Published', field: 'publishedAt', widthGrow: 1, formatter: (cell) => cell.getValue() ? new Date(cell.getValue()).toLocaleString() : '' },
-      { title: 'Description', field: 'description', widthGrow: 3 }
+      { 
+        title: 'Title', 
+        field: 'title', 
+        widthGrow: 2, 
+        formatter: (cell) => {
+          const data = cell.getRow().getData();
+          const url = data.url || '#';
+          return `<a href="${url}" target="_blank" class="text-blue-700 hover:underline">${cell.getValue()}</a>`;
+        }
+      },
+      { 
+        title: 'Source', 
+        field: 'source', 
+        widthGrow: 1,
+        formatter: (cell) => {
+          const value = cell.getValue();
+          // Handle both string sources and object sources
+          return typeof value === 'object' && value?.name ? value.name : value;
+        }
+      },
+      { 
+        title: 'Published', 
+        field: 'date', 
+        widthGrow: 1, 
+        formatter: (cell) => {
+          // Try to get date from either date field or publishedAt
+          const row = cell.getRow().getData();
+          const dateValue = cell.getValue() || row.publishedAt;
+          return dateValue ? new Date(dateValue).toLocaleString() : '';
+        }
+      },
+      { 
+        title: 'Description', 
+        field: 'summary', 
+        widthGrow: 3,
+        formatter: (cell) => {
+          // Try to get description from either summary or description field
+          const row = cell.getRow().getData();
+          return cell.getValue() || row.description || '';
+        }
+      }
     ];
 
-    // Initialize Tabulator
+    // Initialize Tabulator with the article data
     try {
       new Tabulator(tableDiv, {
-        data: result.articles,
+        data: articles,
         columns: columns,
         layout: 'fitColumns',
         height: 200,
         responsiveLayout: true,
       });
     } catch (err) {
+      showErrorNotification('Failed to load news table: ' + err.message);
       tableDiv.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 px-2 py-2 rounded"><p class="font-bold">Failed to load news table</p><p>${err.message}</p></div>`;
     }
 
@@ -183,6 +242,7 @@ async function renderNewsCards() {
     attachCardEventListeners(newsDiv);
   } catch (err) {
     console.error('[renderNewsCards Error]', err);
+    showErrorNotification('Error rendering news cards: ' + err.message);
     newsDiv.innerHTML = `
       <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
         <p class="font-bold">Error</p>
@@ -194,6 +254,7 @@ async function renderNewsCards() {
   }
 }
 
+// Add event listeners for pin/remove buttons in news cards
 function attachCardEventListeners(container) {
   // Remove card event
   container.querySelectorAll('button[data-remove]').forEach(btn => {
@@ -204,12 +265,12 @@ function attachCardEventListeners(container) {
         renderNewsCards();
         renderSidebar();
       } catch (err) {
+        showErrorNotification('Failed to remove card. Please try again.');
         console.error('[Remove Card Error]', err);
         alert('Failed to remove card. Please try again.');
       }
     };
   });
-
   // Pin card event
   container.querySelectorAll('button[data-pin]').forEach(btn => {
     btn.onclick = e => {
@@ -222,12 +283,84 @@ function attachCardEventListeners(container) {
           renderSidebar();
         }
       } catch (err) {
+        showErrorNotification('Failed to pin card. Please try again.');
         console.error('[Pin Card Error]', err);
         alert('Failed to pin card. Please try again.');
       }
     };
   });
 }
+
+// Server-side pagination Tabulator integration
+async function renderNewsTablePaginated() {
+  const newsDiv = document.getElementById('news');
+  newsDiv.innerHTML = '';
+  // Create table container
+  const tableDiv = document.createElement('div');
+  tableDiv.id = 'news-table';
+  tableDiv.className = 'tabulator-table w-full';
+  newsDiv.appendChild(tableDiv);
+
+  // Tabulator columns
+  const columns = [
+    { title: 'Title', field: 'title', widthGrow: 2, formatter: (cell) => `<a href="${cell.getRow().getData().url}" target="_blank" class="text-blue-700 hover:underline">${cell.getValue()}</a>` },
+    { title: 'Source', field: 'source.name', widthGrow: 1 },
+    { title: 'Published', field: 'publishedAt', widthGrow: 1, formatter: (cell) => cell.getValue() ? new Date(cell.getValue()).toLocaleString() : '' },
+    { title: 'Description', field: 'description', widthGrow: 3 }
+  ];
+
+  // DaisyUI/Tailwind styling for pagination controls
+  function styleTabulatorPagination() {
+    setTimeout(() => {
+      document.querySelectorAll('.tabulator-paginator button').forEach(btn => {
+        btn.classList.add('btn', 'btn-xs', 'btn-outline', 'mx-1');
+      });
+      document.querySelectorAll('.tabulator-paginator label').forEach(lbl => {
+        lbl.classList.add('text-xs', 'mx-1');
+      });
+      document.querySelectorAll('.tabulator-paginator input').forEach(inp => {
+        inp.classList.add('input', 'input-xs', 'input-bordered', 'w-16', 'mx-1');
+      });
+    }, 100);
+  }
+
+  // Initialize Tabulator with remote pagination
+  try {
+    const table = new Tabulator(tableDiv, {
+      ajaxURL: 'http://localhost:3000/news',
+      ajaxParams: {}, // Add search/filter params if needed
+      ajaxConfig: 'GET',
+      pagination: 'remote',
+      paginationSize: 10,
+      paginationDataSent: {
+        page: 'page',
+        size: 'pageSize',
+      },
+      paginationDataReceived: {
+        last_page: 'last_page',
+        data: 'data',
+        total_count: 'total_count',
+      },
+      columns: columns,
+      layout: 'fitColumns',
+      height: 400,
+      responsiveLayout: true,
+      ajaxResponse: function(url, params, response) {
+        // response: { data, last_page, total_count }
+        styleTabulatorPagination();
+        return response.data;
+      },
+      renderComplete: styleTabulatorPagination
+    });
+    styleTabulatorPagination();
+  } catch (err) {
+    showErrorNotification('Failed to load news table: ' + err.message);
+    tableDiv.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 px-2 py-2 rounded"><p class="font-bold">Failed to load news table</p><p>${err.message}</p></div>`;
+  }
+}
+
+// Call this instead of renderNewsCards for paginated table
+// renderNewsTablePaginated();
 
 // --- Debug mode toggle ---
 function setDebugMode(on) {
@@ -312,7 +445,7 @@ function renderLoginSidebar() {
   const sidebar = document.getElementById('sidebar');
   sidebar.innerHTML = `<div class="mb-4 font-bold text-lg">Login</div>
     <input id="login-username" class="w-full border rounded p-2 mb-2" placeholder="Username" value="test_user">
-    <input id="login-password" class="w-full border rounded p-2 mb-2" placeholder="Password" type="password" value="testpass">
+    <input id="login-password" class="w-full border rounded p-2 mb-2" placeholder="Password" type="password" value="notasecret"> <!-- notasecret is a demo value, not a real secret -->
     <button id="login-btn" class="px-4 py-2 bg-blue-600 text-white rounded mb-2 w-full">Login</button>
     <div id="login-error" class="text-red-600 mt-2"></div>`;
   document.getElementById('login-btn').onclick = async () => {
@@ -331,6 +464,7 @@ function renderLoginSidebar() {
       renderSidebar();
       updateUIState();
     } catch (e) {
+      showErrorNotification('Login failed.');
       document.getElementById('login-error').textContent = 'Login failed.';
     }
   };
@@ -346,6 +480,27 @@ window.onload = async () => {
   renderSidebar();
   updateUIState();
 };
+
+// --- News view mode toggle ---
+let newsViewMode = localStorage.getItem('newsViewMode') || 'cards'; // 'cards' or 'paginated'
+
+function setNewsViewMode(mode) {
+  newsViewMode = mode;
+  localStorage.setItem('newsViewMode', mode);
+  updateUIState();
+}
+
+function renderNewsViewToggle() {
+  const toggleDiv = document.getElementById('news-view-toggle');
+  if (!toggleDiv) return;
+  toggleDiv.innerHTML = `
+    <div class="flex gap-2 items-center mb-2">
+      <span class="text-xs">View:</span>
+      <button class="btn btn-xs ${newsViewMode === 'cards' ? 'btn-primary' : 'btn-outline'}" onclick="setNewsViewMode('cards')">Cards</button>
+      <button class="btn btn-xs ${newsViewMode === 'paginated' ? 'btn-primary' : 'btn-outline'}" onclick="setNewsViewMode('paginated')">Paginated Table</button>
+    </div>
+  `;
+}
 
 // After Grok/LLM response, check if a new card was created and show confirmation
 async function askGrok() {
@@ -394,8 +549,29 @@ async function askGrok() {
       }
     }, 1000);
   } catch (err) {
+    showErrorNotification('Error: ' + err.message);
     responseElem.textContent = 'Error: ' + err.message;
   } finally {
     inputElem.disabled = false;
   }
 }
+
+// Show error notification using DaisyUI alert
+function showErrorNotification(message) {
+  let alert = document.createElement('div');
+  alert.className = 'alert alert-error shadow-lg fixed top-4 right-4 z-50 w-96';
+  alert.innerHTML = `<span>${message}</span><button class="btn btn-sm btn-ghost ml-auto" onclick="this.parentNode.remove()">✕</button>`;
+  document.body.appendChild(alert);
+  setTimeout(() => { if (alert.parentNode) alert.parentNode.remove(); }, 6000);
+}
+
+// Enable server-side pagination in Tabulator (main app.js)
+// This is a stub for future implementation; backend already supports page/pageSize
+// Example usage:
+// new Tabulator('#news-table', {
+//   ajaxURL: '/news',
+//   ajaxParams: { ... },
+//   pagination: 'remote',
+//   paginationSize: 10,
+//   ...
+// });

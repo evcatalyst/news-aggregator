@@ -1,0 +1,367 @@
+import { useState, useEffect, useRef } from 'react';
+import '../styles/chat-sidebar.css';
+import { makeChatRequest, getNewsDirectly } from '../utils/apiHelper';
+
+// ChatSidebar: Grok-inspired conversational UI for news card management
+const ChatSidebar = ({ isOpen, toggleSidebar, onCreateCard, onUpdateCard, onDeleteCard }) => {
+  const [messages, setMessages] = useState([
+    { id: 1, sender: 'AI', text: 'Hey there! Ask about news or create a card to get started.', timestamp: new Date() },
+  ]);
+  const [input, setInput] = useState('');
+  const [isThinking, setIsThinking] = useState(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const chatHistoryRef = useRef(null);
+  const textareaRef = useRef(null);
+
+  // Scroll to bottom on new messages and track scroll position
+  useEffect(() => {
+    const chatHistory = chatHistoryRef.current;
+    if (chatHistory) {
+      chatHistory.scrollTo({ top: chatHistory.scrollHeight, behavior: 'smooth' });
+      const handleScroll = () => {
+        const isAtBottom = chatHistory.scrollHeight - chatHistory.scrollTop <= chatHistory.clientHeight + 10;
+        setShowScrollButton(!isAtBottom);
+      };
+      chatHistory.addEventListener('scroll', handleScroll);
+      return () => chatHistory.removeEventListener('scroll', handleScroll);
+    }
+  }, [messages]);
+
+  // Focus input when sidebar opens
+  useEffect(() => {
+    if (isOpen && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [isOpen]);
+
+  // Handle sending messages and parsing commands
+  const handleSend = async () => {
+    if (!input.trim()) return;
+
+    const userMessage = { id: messages.length + 1, sender: 'User', text: input, timestamp: new Date() };
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setIsThinking(true);
+
+    try {
+      // Use our enhanced API helper with automatic retries and fallbacks
+      const data = await makeChatRequest(input, {
+        maxRetries: 2,
+        timeout: 20000,
+        useSimplification: true
+      });
+      
+      const { response: explanation, newsResults } = data;
+      
+      // Format the response message
+      const responseText = explanation || "I couldn't find any specific information about that.";
+      
+      // Log result summary for debugging
+      console.log('Received news results:', newsResults?.length || 0, 'articles');
+      
+      setMessages(prev => [
+        ...prev,
+        { id: prev.length + 1, sender: 'AI', text: responseText, timestamp: new Date() },
+      ]);
+      
+      // If we got news results, create a new card
+      if (newsResults && Array.isArray(newsResults) && newsResults.length > 0) {
+        const newCard = {
+          id: Date.now(),
+          title: input.match(/about\s+(.+)/i)?.[1] || input,
+          category: getCategoryFromInput(input),
+          source: 'News API',
+          date: new Date().toISOString().split('T')[0],
+          summary: explanation || 'Created from chat query',
+          articles: newsResults.map((article, i) => ({
+            id: Date.now() + i,
+            title: article.title,
+            category: getCategoryFromArticle(article),
+            source: article.source?.name || 'Unknown',
+            date: new Date(article.publishedAt).toISOString().split('T')[0],
+            summary: article.description || 'No description available',
+            url: article.url
+          }))
+        };
+        
+        onCreateCard(newCard);
+        
+        // Add a confirmation message
+        setTimeout(() => {
+          setMessages(prev => [
+            ...prev,
+            { 
+              id: prev.length + 1, 
+              sender: 'AI', 
+              text: `✅ New card created with ${newsResults.length} article${newsResults.length !== 1 ? 's' : ''}!`, 
+              timestamp: new Date() 
+            },
+          ]);
+        }, 500);
+      }
+    } catch (error) {
+      console.error('Error in chat request after all retries:', error);
+      
+      // Get a more specific error message to show the user
+      let errorMessage = "Sorry, I encountered a problem processing your request.";
+      
+      if (error.name === 'AbortError' || error.message.includes('timeout')) {
+        errorMessage = `The request timed out. The server might be busy or experiencing issues. I'll try to get you some general headlines instead.`;
+      } else if (error.message.includes('500')) {
+        errorMessage = `The news service is currently experiencing technical difficulties (500 error). I'll try to get you some general headlines instead.`;
+      } else if (error.message.includes('429')) {
+        errorMessage = `We've reached the limit of requests to the news service. Please try again in a moment.`;
+      }
+      
+      // Add the error message to the chat
+      setMessages(prev => [
+        ...prev,
+        { 
+          id: prev.length + 1, 
+          sender: 'AI', 
+          text: errorMessage, 
+          timestamp: new Date() 
+        },
+      ]);
+      
+      // Always try to get top headlines as a last resort
+      try {
+        const fallbackData = await getNewsDirectly();
+        
+        if (fallbackData.data && fallbackData.data.length > 0) {
+          // Create a card with top headlines
+          const newCard = {
+            id: Date.now(),
+            title: "Today's Top Headlines",
+            category: "Headlines",
+            source: "News API",
+            date: new Date().toISOString().split('T')[0],
+            summary: "Latest headlines when specific search failed",
+            articles: fallbackData.data.slice(0, 10).map((article, i) => ({
+              id: Date.now() + i,
+              title: article.title,
+              category: getCategoryFromArticle(article),
+              source: article.source?.name || 'Unknown',
+              date: new Date(article.publishedAt).toISOString().split('T')[0],
+              summary: article.description || 'No description available',
+              url: article.url
+            }))
+          };
+          
+          onCreateCard(newCard);
+          
+          // Let the user know we've created a fallback card
+          setTimeout(() => {
+            setMessages(prev => [
+              ...prev,
+              { 
+                id: prev.length + 1, 
+                sender: 'AI', 
+                text: `While I couldn't process your specific query, I've created a card with today's top headlines instead.`, 
+                timestamp: new Date() 
+              },
+            ]);
+          }, 800);
+        }
+      } catch (fallbackError) {
+        console.error('Even fallback request failed:', fallbackError);
+        
+        // If even the fallback fails, offer suggestions
+        setTimeout(() => {
+          setMessages(prev => [
+            ...prev,
+            { 
+              id: prev.length + 1, 
+              sender: 'AI', 
+              text: `Try again in a few moments or use simpler queries like "technology news" or "sports headlines".`, 
+              timestamp: new Date() 
+            },
+          ]);
+        }, 800);
+      }
+      
+      // Always suggest a helpful tip after errors
+      setTimeout(() => {
+        const suggestions = [
+          "Try asking for specific topics like 'business news about Tesla'",
+          "You can request news from specific timeframes like 'news from last week'",
+          "Try broader categories like 'sports', 'technology', or 'entertainment'",
+          "For better results, use short, clear queries"
+        ];
+        
+        // Choose a random suggestion
+        const randomSuggestion = suggestions[Math.floor(Math.random() * suggestions.length)];
+        
+        setMessages(prev => [
+          ...prev,
+          { 
+            id: prev.length + 1, 
+            sender: 'AI', 
+            text: `💡 Tip: ${randomSuggestion}`, 
+            timestamp: new Date() 
+          },
+        ]);
+      }, 1600);
+    } finally {
+      setIsThinking(false);
+    }
+  };
+  
+  // Helper functions to categorize content
+  const getCategoryFromInput = (input) => {
+    const lowerInput = input.toLowerCase();
+    
+    if (lowerInput.match(/tech|apple|google|ai|robot|computer|software|hardware|programming/i)) {
+      return 'Tech';
+    } else if (lowerInput.match(/sport|game|team|player|match|tournament|basketball|football|soccer|nba|nfl/i)) {
+      return 'Sports';
+    } else if (lowerInput.match(/movie|film|tv|television|actor|actress|director|show|series|music|celebrity|entertainment/i)) {
+      return 'Entertainment';
+    }
+    return 'Other';
+  };
+  
+  const getCategoryFromArticle = (article) => {
+    const title = (article.title || '').toLowerCase();
+    const description = (article.description || '').toLowerCase();
+    const content = title + ' ' + description;
+    
+    if (content.match(/tech|apple|google|ai|robot|computer|software|hardware|programming/i)) {
+      return 'Tech';
+    } else if (content.match(/sport|game|team|player|match|tournament|basketball|football|soccer|nba|nfl/i)) {
+      return 'Sports';
+    } else if (content.match(/movie|film|tv|television|actor|actress|director|show|series|music|celebrity|entertainment/i)) {
+      return 'Entertainment';
+    }
+    return 'Other';
+  };
+
+  // Scroll to bottom when button clicked
+  const scrollToBottom = () => {
+    chatHistoryRef.current?.scrollTo({ top: chatHistoryRef.current.scrollHeight, behavior: 'smooth' });
+  };
+
+  // Handle keyboard shortcuts to send
+  const handleKeyDown = (e) => {
+    // Send on Enter (without Shift for new line)
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+  
+  // Autofocus input when messages change
+  useEffect(() => {
+    if (textareaRef.current && messages.length > 0 && !isThinking) {
+      textareaRef.current.focus();
+    }
+  }, [messages, isThinking]);
+
+  return (
+    <aside
+      className="flex flex-col h-full w-full bg-gray-800 text-gray-200"
+      aria-label="Chat with Grok"
+    >
+      <div className="p-2 bg-gray-900 text-gray-200 text-sm font-medium flex items-center justify-between">
+        <span className="flex items-center gap-1">
+          <span className="material-icons text-base">smart_toy</span>
+          Grok Assistant
+        </span>
+        {toggleSidebar && (
+          <button 
+            onClick={toggleSidebar}
+            className="text-gray-400 hover:text-white md:hidden"
+            aria-label="Close sidebar"
+          >
+            <span className="material-icons text-base">close</span>
+          </button>
+        )}
+      </div>
+
+      <div
+        ref={chatHistoryRef}
+        className="flex-grow overflow-y-auto p-3 space-y-2"
+        aria-live="polite"
+      >
+        {messages.map(msg => (
+          <article
+            key={msg.id}
+            className={`flex ${msg.sender === 'User' ? 'justify-end' : 'justify-start'} animate-fade-in`}
+          >
+            <div
+              className={`max-w-[80%] p-2 rounded-lg text-xs border border-gray-600 shadow-sm flex items-start gap-2 ${
+                msg.sender === 'User' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-200'
+              }`}
+            >
+              <span className="w-4 h-4 rounded-full bg-gray-500 flex-shrink-0" />
+              <div>
+                <p className="font-semibold flex items-center gap-1">
+                  {msg.sender === 'User' ? (
+                    <span className="material-icons text-base align-middle">person</span>
+                  ) : (
+                    <span className="material-icons text-base align-middle">smart_toy</span>
+                  )}
+                  {msg.sender === 'User' ? 'You' : 'Grok'}
+                </p>
+                <p>{msg.text}</p>
+                {msg.timestamp && (
+                  <time className="text-[10px] text-gray-400">
+                    {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </time>
+                )}
+              </div>
+            </div>
+          </article>
+        ))}
+        {isThinking && (
+          <div className="flex justify-start animate-fade-in">
+            <div className="max-w-[80%] p-2 rounded-lg text-xs bg-gray-700 text-gray-200 flex items-center gap-1">
+              <span className="typing-dot" />
+              <span className="typing-dot" />
+              <span className="typing-dot" />
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="p-3 border-t border-gray-700">
+        <textarea
+          ref={textareaRef}
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          className="w-full p-2 text-xs bg-gray-900 text-gray-200 border border-gray-600 rounded resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Ask about news or create a card..."
+          disabled={isThinking}
+          rows={2}
+          aria-label="Chat input"
+        />
+        <div className="flex items-center justify-between mt-2">
+          <span className="text-xs text-gray-400">Press Enter to send (Shift+Enter for new line)</span>
+          <button
+            onClick={handleSend}
+            disabled={isThinking}
+            className={`py-1.5 px-3 text-xs bg-yellow-300 text-gray-900 rounded hover:bg-yellow-400 transition-colors ${
+              isThinking ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+            aria-label="Send message"
+          >
+            {isThinking ? 'Thinking...' : 'Send'}
+          </button>
+        </div>
+      </div>
+      
+      {showScrollButton && (
+        <button
+          onClick={scrollToBottom}
+          className="absolute bottom-24 right-4 w-8 h-8 rounded-full bg-yellow-300 text-gray-900 flex items-center justify-center text-lg shadow-md"
+          aria-label="Scroll to bottom"
+        >
+          ↓
+        </button>
+      )}
+    </aside>
+  );
+};
+
+export default ChatSidebar;

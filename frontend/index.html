@@ -6,23 +6,19 @@
   <title>News Dashboard</title>
   <link href="./tailwind.css" rel="stylesheet">
   <link href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator.min.css" rel="stylesheet">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Google Material Icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <!-- Custom NewsTable styles -->
+  <link rel="stylesheet" href="src/styles/table-custom.css">
+  <link rel="stylesheet" href="src/styles/tabulator-mobile.css">
+  <link rel="stylesheet" href="src/styles/chat-sidebar-clean.css">
+  <meta name="theme-color" content="#1e293b">
 </head>
-<body class="bg-gray-100 min-h-screen">
-  <div style="display: flex; flex-direction: row; max-width: 80vw; margin: 2rem auto; min-height: 80vh;">
-    <!-- Sidebar for Chat -->
-    <aside id="sidebar" style="width: 320px; min-width: 240px; max-width: 400px; background: #fff; border-radius: 0.5rem; box-shadow: 0 2px 8px #0001; padding: 1.5rem; margin-right: 2rem; display: flex; flex-direction: column; height: fit-content;">
-      <h2 class="text-xl font-semibold mb-2">Ask Grok</h2>
-      <textarea id="grok-input" class="w-full border rounded p-2 mb-2" rows="4" placeholder="Ask a question..."></textarea>
-      <button id="grok-btn" class="px-4 py-2 bg-blue-600 text-white rounded mb-2">Ask</button>
-      <div id="grok-response" class="mt-2 text-gray-700"></div>
-    </aside>
-    <!-- Main Content for News -->
-    <main style="flex: 1;">
-      <h1 class="text-3xl font-bold mb-4 text-center">Schenectady News</h1>
-      <div id="news" class="space-y-4"></div>
-    </main>
-  </div>
+<body class="bg-slate-50 min-h-screen dark:bg-gray-900">
+  <div id="root"></div>
   <script src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
-  <script src="./app.js"></script>
+  <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>
