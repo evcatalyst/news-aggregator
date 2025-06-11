@@ -72,6 +72,9 @@ cd proxy && ./rebuild_stack.sh
 news-aggregator/
 ├── docker-compose.yml          # Container orchestration
 ├── README.md                   # You are here
+├── ARCHITECTURE.md             # Application architecture documentation
+├── BUGLOG.md                   # Known issues and reproduction steps
+├── TODO.md                     # Planned improvements and tasks
 ├── architecture_notes.txt      # Technical decisions & changelog
 ├── proxy/                      # Backend API server
 │   ├── server.js              # Express.js application
@@ -85,6 +88,11 @@ news-aggregator/
     ├── tailwind.css           # Compiled Tailwind styles
     ├── input.css              # Tailwind source
     ├── package.json           # npm dependencies (Tabulator, Playwright)
+    ├── src/                   # React component source
+    │   ├── App.jsx           # Main React application
+    │   ├── components/       # UI components including ChatSidebar.jsx
+    │   ├── styles/           # Component-specific styles
+    │   └── utils/            # Helper functions
     └── node_modules/          # Local Tabulator installation
 ```
 
@@ -179,9 +187,22 @@ npm run test:debug
 
 ### Common Issues & Solutions
 
+#### ❌ Card Creation Issues
+**In progress!** Sometimes new cards are not created for certain queries.
+- Check console for `[ChatSidebar]` debug messages
+- Verify the API returned valid articles
+- Try a different search query
+- See `BUGLOG.md` for more details
+
+#### ❌ Pagination Controls Cut Off
+**In progress!** The table pagination controls may be cut off in some cards.
+- This has been partially fixed by increasing card height to 270px and adding margin
+- If you still see this issue, you can add additional margin to the cards
+
 #### ❌ Tabulator Failed to Load
-**Fixed in latest version!** We now use local npm installation instead of CDN.
+**Fixed in latest version!** We now use local npm installation instead of CDN, with proper Luxon integration.
 - If you still see this, run: `./proxy/rebuild_stack.sh`
+- For Luxon dependency errors, check browser console for detailed logs
 
 #### ❌ Docker Credential Issues
 **Fixed in latest version!** Simplified Docker configuration removes credential dependencies.
@@ -210,25 +231,68 @@ docker compose down
 ### 🐞 Debug Mode
 - Debug logging is enabled by default in development
 - Toggle debug in the frontend sidebar
-- Check browser console for detailed logs
+- Check browser console for detailed logs with prefixes:
+  - `[ChatSidebar]` - Card creation and chat interaction logs
+  - `[App]` - Main application state changes
+  - `[NewsTable]` - Table rendering and data issues
 - View server logs: `docker compose logs proxy`
+- Card creation debugging:
+  ```javascript
+  // Example debug log sequence for card creation
+  [ChatSidebar] handleSend: newsResults [...] 
+  [ChatSidebar] handleSend: validArticles [...]
+  [ChatSidebar] handleSend: newCard {...}
+  [ChatSidebar] handleSend: onCreateCard result true|false
+  ```
 
 ---
 
-## Known Issues (2025-06-10)
+## Known Issues (2025-06-11)
 
 - New cards are sometimes not created for certain queries (e.g. 'cats'), or all new searches are added to the same table/card.
+- ~~Tabulator dependency issues with Luxon (resolved in latest update)~~
 - There is no clear local log of card creation events, making debugging difficult. Debug logging has now been added to `ChatSidebar.jsx`.
-- Pagination controls at the bottom of the table can be cut off depending on card/table height.
+- Pagination controls at the bottom of the table can be cut off depending on card/table height (fix is in progress).
+- Card creation logic sometimes reports success even when no card was actually created.
 - See `BUGLOG.md` for more details and reproduction steps.
 
 ## Debugging Tips
 - Open the browser console and look for `[ChatSidebar]` logs to trace card creation attempts/results.
+- Debug logs are prefixed with tags like `[ChatSidebar]` and contain information about:
+  - Card creation attempts
+  - News API results
+  - Valid article filtering
+  - New card creation details
+  - Success/failure of card addition
 - If a card is not created, check the API response and the debug logs for clues.
+- Check `ARCHITECTURE.md` for information about the card creation flow.
 
 ---
 
 ## Recent Updates & Fixes
+
+### ✅ 2025-06-11 - Tabulator Luxon Integration Fix
+**Resolved Tabulator datetime formatting issues:**
+- **Fixed Luxon dependency**: Properly exposed Luxon DateTime to Tabulator for date formatting
+- **Added custom formatters**: Created robust `luxonDatetime` formatter with fallbacks
+- **Enhanced resilience**: Added `formatDateSafe()` utility to handle date formatting issues
+- **Synchronized versions**: Updated Tabulator CDN version from 5.5.0 to 6.3.0 to match npm package
+- **Added tabulator-init.js**: Created initialization module to ensure proper formatter setup
+- **Improved error handling**: Enhanced logging and fallback mechanisms for dates
+
+### ✅ 2025-06-10 - Card Creation & Debugging Improvements
+**Card creation and UI fixes:**
+- **Enhanced debugging**: Added comprehensive debug logging in `ChatSidebar.jsx` to trace card creation flow
+- **Improved feedback accuracy**: Updated card creation to only show success messages when cards are actually created
+- **Fixed UI glitches**: Increased card height and margin to prevent pagination controls from being cut off
+- **Better documentation**: Added `BUGLOG.md`, `TODO.md`, and `ARCHITECTURE.md` for tracking issues and structure
+- **Security improvement**: Changed test credentials from "testpass" to "notasecret" to avoid git secrets warnings
+- **CI improvement**: Removed pre-commit hook that was causing secret scanning warnings during commits
+
+### ✅ 2025-06-09 - Tabulator Migration & Cleanup
+- **Migrated to Tabulator**: Replaced ag-Grid with Tabulator for news table rendering
+- **Removed ag-Grid references**: Cleaned up all ag-Grid code, tests, and documentation
+- **Updated Playwright tests**: Now test Tabulator integration
 
 ### ✅ 2025-06-08 - ag-Grid Reliability & Docker Credential Fix
 **Major stability improvements:**
@@ -238,11 +302,6 @@ docker compose down
 - **Enhanced error handling**: Better debugging and fallback mechanisms
 - **Improved script order**: Fixed race conditions in resource loading
 - **All tests passing**: 4/4 Playwright integration tests now pass reliably
-
-### ✅ 2025-06-09 - Tabulator Migration & Cleanup
-- **Migrated to Tabulator**: Replaced ag-Grid with Tabulator for news table rendering
-- **Removed ag-Grid references**: Cleaned up all ag-Grid code, tests, and documentation
-- **Updated Playwright tests**: Now test Tabulator integration
 
 ---
 
@@ -348,4 +407,28 @@ sequenceDiagram
   - frontend/tabulator.test.js
   - README.md
 
-**Note:** You may see a pre-commit warning about a potential secret (`testpass`) in `frontend/app.js`. This is a demo/test value and not a real password or secret. It is safe to ignore this warning for development.
+**Note:** You may see a git warning about a potential secret in `proxy/server.js`. This is a demo value ("notasecret") and not a real credential. It is safe for development purposes.
+
+---
+
+## Card Creation Process
+
+The application creates news cards through the following flow:
+
+1. User makes a query in the chat interface (`ChatSidebar.jsx`)
+2. Request is sent to Grok via the proxy server
+3. Response is processed to extract news articles
+4. Valid articles are filtered and formatted
+5. A card object is created with a unique ID and the formatted articles
+6. `onCreateCard()` is called to add the card to the application state
+7. Feedback is provided based on the success/failure of card creation
+
+### Debugging Card Creation Issues
+
+If you encounter issues with card creation:
+
+1. Check console logs for messages prefixed with `[ChatSidebar]`
+2. Verify that `handleCreateCard` in `App.jsx` is properly detecting duplicates
+3. Ensure card height and margins are sufficient for pagination controls
+4. Review `BUGLOG.md` for known issues and reproduction steps
+5. Check `TODO.md` for planned improvements

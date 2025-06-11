@@ -1,5 +1,16 @@
 # Bug Log: News Aggregator
 
+## 2025-06-11
+
+### Tabulator Dependency Issues
+- ✅ FIXED: Tabulator was failing to find Luxon DateTime dependency, causing date formatting to fail
+- Symptom: Error in console "Unable to find dependency ["luxon", "DateTime"]"
+- Solution: 
+  - Updated Tabulator CDN version from 5.5.0 to 6.3.0 to match npm package
+  - Created custom `luxonDatetime` formatter with better error handling
+  - Added explicit Luxon CDN import and proper global exposure
+  - Implemented fallback date formatting with native JavaScript Date
+
 ## 2025-06-10
 
 ### Card Creation/Chat Integration

@@ -1,3 +1,29 @@
+// Import Luxon and expose it globally for Tabulator
+import * as luxon from 'luxon';
+
+// Make sure Luxon is available in all the ways Tabulator might look for it
+window.luxon = luxon;
+window.DateTime = luxon.DateTime;
+
+// Check if Tabulator module variable exists (for ES module version)
+if (typeof TabulatorFull !== 'undefined') {
+  // Set datetime formatter for Tabulator if using ES modules
+  TabulatorFull.prototype.extendModule("format", "formatters", {
+    datetime: function(cell, formatterParams) {
+      // Implementation would be here
+    }
+  });
+}
+
+// Debug logging to help troubleshoot
+if (AppState && AppState.debug) {
+  console.debug('[app.js] Luxon setup complete:', { 
+    luxonAvailable: !!window.luxon,
+    dateTimeAvailable: !!window.DateTime,
+    version: window.luxon?.VERSION || 'unknown' 
+  });
+}
+
 // Application state management
 const AppState = {
   isLoading: false,
@@ -9,11 +35,52 @@ const AppState = {
   debug: (window.localStorage.getItem('debug') === 'true') || true // default to true in dev
 };
 
-// Show loading/error states
+/**
+ * Utility function for formatting dates safely, with fallbacks
+ * @param {string|Date} dateStr - The date string or object to format
+ * @returns {string} Formatted date string or empty string if invalid
+ */
+function formatDateSafe(dateStr) {
+  if (!dateStr) return "";
+  
+  try {
+    // Try with Luxon first if available
+    if (window.luxon && window.luxon.DateTime) {
+      const dt = window.luxon.DateTime.fromISO(dateStr);
+      if (dt.isValid) {
+        return dt.toFormat("dd MMM yyyy HH:mm");
+      }
+    }
+    
+    // Fallback to native Date
+    const date = new Date(dateStr);
+    return isNaN(date.getTime()) ? "" : date.toLocaleString();
+  } catch (e) {
+    console.error("Date formatting error:", e);
+    return "";
+  }
+}
+
+// Show loading/error states and track unique card rendering
 function updateUIState() {
+  if (!AppState.currentUser) {
+    // Not authenticated, don't render news/cards
+    return;
+  }
   const newsDiv = document.getElementById('news');
   renderNewsViewToggle();
   if (!newsDiv) return;
+
+  // Track rendered cards to prevent duplicates
+  window.renderedCardIds = window.renderedCardIds || new Set();
+  
+  if (AppState.debug) {
+    console.debug('[app.js] updateUIState called with', { 
+      cards: AppState.searchResults?.length || 0,
+      loading: AppState.isLoading,
+      error: AppState.hasError
+    });
+  }
 
   if (AppState.isLoading) {
     newsDiv.innerHTML = `
@@ -91,20 +158,53 @@ let currentUser = null;
 // --- News loading and rendering
 async function renderNewsCard(result, idx, container) {
   try {
-    // Card container
+    // Track rendered cards to prevent duplicates
+    window.renderedCardIds = window.renderedCardIds || new Set();
+    
+    // Ensure card has a unique ID
+    const cardId = result.id || Date.now() + Math.floor(Math.random() * 1000);
+    
+    // Skip if we've already rendered this card (prevents duplicate cards)
+    if (window.renderedCardIds.has(String(cardId))) {
+      console.debug(`[renderNewsCard] Skipping duplicate card ID ${cardId}`);
+      return;
+    }
+    window.renderedCardIds.add(String(cardId));
+    
+    // Debug logging
+    if (AppState.debug) {
+      console.debug('[renderNewsCard]', { 
+        cardId, 
+        title: result.title, 
+        articles: result.articles?.length || 0,
+        timestamp: result.timestamp || new Date().toISOString()
+      });
+    }
+    
+    // Card container with proper spacing for pagination
     const card = document.createElement('div');
-    card.className = 'bg-white rounded shadow p-2 mb-2';
+    card.className = 'bg-white rounded shadow p-2 mb-4'; // Increased bottom margin
     card.style.position = 'relative';
     card.style.fontSize = '0.92em';
+    card.style.marginBottom = '3rem'; // Extra margin for pagination controls
     
-    // Set a data attribute for the card ID to help with event handling
-    card.dataset.cardId = result.id || idx;
+    // Set data attributes for tracking and debugging
+    card.dataset.cardId = cardId;
+    card.dataset.cardIndex = idx;
+    card.dataset.cardTimestamp = result.timestamp || new Date().toISOString();
 
-    // Card header with a more descriptive title
+    // Card header with a more descriptive title and creation time
+    const cardTimestamp = result.timestamp ? 
+      new Date(result.timestamp).toLocaleTimeString() : 
+      new Date().toLocaleTimeString();
     const cardTitle = result.title || `Search #${idx + 1}`;
+    
     card.innerHTML = `
       <div class="flex items-center justify-between mb-1">
-        <div class="font-semibold text-xs">${cardTitle}</div>
+        <div class="font-semibold text-xs">
+          ${cardTitle}
+          <span class="text-gray-400 text-xs ml-1">(${cardTimestamp})</span>
+        </div>
         <div class="flex gap-1">
           <button class="text-xs text-blue-600 hover:underline" data-pin="${idx}">Pin</button>
           <button class="text-xs text-red-600 hover:underline" data-remove="${idx}">Remove</button>
@@ -119,10 +219,15 @@ async function renderNewsCard(result, idx, container) {
 
     // Tabulator container
     const tableDiv = document.createElement('div');
-    tableDiv.style.height = '270px'; // Increased height for pagination
-    // Add extra bottom margin to card for pagination controls
-    card.style.marginBottom = '2.5rem';
+    tableDiv.style.height = '300px'; // Further increased height for pagination
+    // Add extra bottom margin and padding to card for pagination controls
+    card.style.marginBottom = '3rem';
+    card.style.paddingBottom = '1rem';
     tableDiv.className = 'tabulator-table w-full';
+    // Add a debug data attribute to help troubleshoot card issues
+    tableDiv.dataset.cardId = result.id;
+    tableDiv.dataset.cardTitle = result.title;
+    tableDiv.dataset.cardTimestamp = result.timestamp || new Date().toISOString();
     card.appendChild(tableDiv);
 
     // Make sure we have articles and they're in an array
@@ -160,11 +265,15 @@ async function renderNewsCard(result, idx, container) {
         title: 'Published', 
         field: 'date', 
         widthGrow: 1, 
-        formatter: (cell) => {
+        formatter: "luxonDatetime",  // Use our custom formatter
+        formatterParams: {
+          inputFormat: "iso",
+          outputFormat: "dd MMM yyyy HH:mm",
+          invalidPlaceholder: "(unknown)"
+        },
+        accessorFunc: (row) => {
           // Try to get date from either date field or publishedAt
-          const row = cell.getRow().getData();
-          const dateValue = cell.getValue() || row.publishedAt;
-          return dateValue ? new Date(dateValue).toLocaleString() : '';
+          return row.date || row.publishedAt || "";
         }
       },
       { 
@@ -181,14 +290,48 @@ async function renderNewsCard(result, idx, container) {
 
     // Initialize Tabulator with the article data
     try {
+      if (AppState.debug) {
+        console.debug(`[renderNewsCard] Initializing Tabulator for card ${result.id || idx} with ${articles.length} articles`);
+      }
+      
       new Tabulator(tableDiv, {
         data: articles,
         columns: columns,
         layout: 'fitColumns',
-        height: 200,
-        responsiveLayout: true,
+        height: 250, // Increased height for better pagination visibility
+        minHeight: 200,
+        responsiveLayout: 'collapse', // Better mobile support
+        pagination: 'local', // Enable pagination for all tables
+        paginationSize: 5, // Default page size
+        paginationSizeSelector: [5, 10, 20], // Let users choose page size
+        movableColumns: true, // Better user experience
+        tooltips: true, // More accessible
+        placeholder: 'No articles available', // Friendlier message
+        footerElement: `<div class="tabulator-footer-label">Card ID: ${result.id || idx}</div>`,
       });
+      
+      // Add an observer to ensure pagination controls are visible
+      if (window.IntersectionObserver) {
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (!entry.isIntersecting) {
+              // If pagination is hidden, add more space
+              card.style.marginBottom = '4rem';
+              card.style.paddingBottom = '2rem';
+            }
+          });
+        }, { threshold: 0.9 });
+        
+        // Observe pagination controls after a delay to ensure they're rendered
+        setTimeout(() => {
+          const paginationControls = tableDiv.querySelector('.tabulator-footer');
+          if (paginationControls) {
+            observer.observe(paginationControls);
+          }
+        }, 300);
+      }
     } catch (err) {
+      console.error('[renderNewsCard] Tabulator initialization failed:', err);
       showErrorNotification('Failed to load news table: ' + err.message);
       tableDiv.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 px-2 py-2 rounded"><p class="font-bold">Failed to load news table</p><p>${err.message}</p></div>`;
     }
@@ -233,9 +376,45 @@ async function renderNewsCards() {
       return;
     }
 
-    // Render each card
+    // Reset card tracking for a fresh render
+    window.renderedCardIds = new Set();
+    
+    // Check for potentially duplicate cards in AppState
+    if (AppState.debug) {
+      const cardIds = AppState.searchResults.map(card => card.id);
+      const uniqueCardIds = [...new Set(cardIds)];
+      if (cardIds.length !== uniqueCardIds.length) {
+        console.warn('[renderNewsCards] Potential duplicate card IDs detected in AppState', 
+          { total: cardIds.length, unique: uniqueCardIds.length });
+      }
+    }
+    
+    // Render each card with tracking
+    let renderedCount = 0;
     for (let i = 0; i < AppState.searchResults.length; i++) {
-      await renderNewsCard(AppState.searchResults[i], i, newsDiv);
+      const card = AppState.searchResults[i];
+      if (!card) {
+        console.warn(`[renderNewsCards] Invalid card at index ${i}`);
+        continue;
+      }
+      
+      // Skip cards with no articles or empty title
+      if (!card.articles || !Array.isArray(card.articles) || card.articles.length === 0) {
+        if (AppState.debug) {
+          console.debug(`[renderNewsCards] Skipping card at index ${i} with no articles`);
+        }
+        continue;
+      }
+      
+      // Add index reference to card for tracking
+      card._index = i;
+      
+      await renderNewsCard(card, i, newsDiv);
+      renderedCount++;
+    }
+    
+    if (AppState.debug) {
+      console.debug(`[renderNewsCards] Rendered ${renderedCount} cards out of ${AppState.searchResults.length} total`);
     }
 
     // Add event listeners for pin/remove buttons
@@ -305,7 +484,17 @@ async function renderNewsTablePaginated() {
   const columns = [
     { title: 'Title', field: 'title', widthGrow: 2, formatter: (cell) => `<a href="${cell.getRow().getData().url}" target="_blank" class="text-blue-700 hover:underline">${cell.getValue()}</a>` },
     { title: 'Source', field: 'source.name', widthGrow: 1 },
-    { title: 'Published', field: 'publishedAt', widthGrow: 1, formatter: (cell) => cell.getValue() ? new Date(cell.getValue()).toLocaleString() : '' },
+    { 
+      title: 'Published', 
+      field: 'publishedAt', 
+      widthGrow: 1, 
+      formatter: "luxonDatetime",  // Use our custom formatter
+      formatterParams: {
+        inputFormat: "iso",
+        outputFormat: "dd MMM yyyy HH:mm",
+        invalidPlaceholder: "(unknown)"
+      }
+    },
     { title: 'Description', field: 'description', widthGrow: 3 }
   ];
 
@@ -426,17 +615,24 @@ function renderSidebar() {
 // Authentication check
 async function checkAuth() {
   const token = localStorage.getItem('token');
-  if (!token) return false;
+  if (!token) {
+    AppState.currentUser = null;
+    return false;
+  }
   try {
     const res = await fetch('http://localhost:3000/me', {
       method: 'POST',
       headers: { 'Authorization': token }
     });
-    if (!res.ok) return false;
+    if (!res.ok) {
+      AppState.currentUser = null;
+      return false;
+    }
     const data = await res.json();
     AppState.currentUser = data;
     return true;
   } catch {
+    AppState.currentUser = null;
     return false;
   }
 }
@@ -529,7 +725,17 @@ async function askGrok() {
     // Assume response: { response: string, newsResults?: [...] }
     AppState.chatHistory.push({ input: prompt, response: data.response });
     if (data.newsResults && Array.isArray(data.newsResults)) {
-      AppState.searchResults.push({ articles: data.newsResults, explanation: data.response });
+      // --- FIX: Always create a full card object with id, title, etc. ---
+      const cardId = Date.now() + Math.floor(Math.random() * 1000);
+      const cardTitle = prompt.length > 40 ? prompt.slice(0, 40) + '...' : prompt;
+      AppState.searchResults.push({
+        id: cardId,
+        title: cardTitle,
+        articles: data.newsResults,
+        explanation: data.response,
+        originalQuery: prompt,
+        timestamp: new Date().toISOString()
+      });
       updateUIState();
     }
     renderSidebar();

@@ -72,10 +72,18 @@
 /* Pagination styling */
 .tabulator-paginator {
   font-size: 0.875rem;
+  margin-bottom: 1.5rem; /* Ensure pagination controls have room */
 }
 
 .tabulator-pages {
   margin: 0 0.5rem;
+}
+
+.tabulator .tabulator-footer {
+  padding-top: 10px;
+  padding-bottom: 10px; /* More padding at the bottom */
+  position: relative;
+  z-index: 10;
 }
 
 .tabulator-page {

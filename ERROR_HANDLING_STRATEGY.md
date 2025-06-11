@@ -49,6 +49,23 @@ This document outlines the error handling and fallback strategies implemented in
    - Manages timeouts consistently
    - Provides detailed error context
 
+### Date Formatting Resilience (app.js, tabulator-init.js)
+
+1. **Multi-Layer Date Formatting Strategy** (Added June 11, 2025)
+   - Primary: Luxon-based custom formatter (`luxonDatetime`)
+   - Secondary: Native Date object fallback in `formatDateSafe()`
+   - Final: Empty string with console error for complete failures
+   
+2. **Date Format Error Detection**
+   - Try-catch blocks around all date parsing operations
+   - Detailed console logging for parsing failures
+   - Invalid placeholder text for unparseable dates
+   
+3. **Tabulator-Luxon Integration**
+   - Multiple global exposure methods for Luxon (`window.luxon`, `window.DateTime`)
+   - Version compatibility checks between CDN and npm packages
+   - Initialization module to ensure formatters are registered before table rendering
+
 2. **getNewsDirectly Function**
    - Direct fallback to news endpoint when chat fails
    - Guaranteed results even when specific queries fail

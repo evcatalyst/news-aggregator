@@ -17,13 +17,31 @@ const ChatSidebar = ({ isOpen, toggleSidebar, onCreateCard, onUpdateCard, onDele
   useEffect(() => {
     const chatHistory = chatHistoryRef.current;
     if (chatHistory) {
-      chatHistory.scrollTo({ top: chatHistory.scrollHeight, behavior: 'smooth' });
+      // Use a more compatible way to scroll that works in JSDOM for tests
+      try {
+        if (typeof chatHistory.scrollTo === 'function') {
+          chatHistory.scrollTo({ top: chatHistory.scrollHeight, behavior: 'smooth' });
+        } else {
+          // Fallback for JSDOM in tests
+          chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+      } catch (error) {
+        // Silent fail in test environment
+        console.debug('[ChatSidebar] Error scrolling chat:', error.message);
+      }
+      
       const handleScroll = () => {
         const isAtBottom = chatHistory.scrollHeight - chatHistory.scrollTop <= chatHistory.clientHeight + 10;
         setShowScrollButton(!isAtBottom);
       };
-      chatHistory.addEventListener('scroll', handleScroll);
-      return () => chatHistory.removeEventListener('scroll', handleScroll);
+      
+      try {
+        chatHistory.addEventListener('scroll', handleScroll);
+        return () => chatHistory.removeEventListener('scroll', handleScroll);
+      } catch (error) {
+        // Silent fail in test environment
+        console.debug('[ChatSidebar] Error with scroll listener:', error.message);
+      }
     }
   }, [messages]);
 
@@ -71,30 +89,52 @@ const ChatSidebar = ({ isOpen, toggleSidebar, onCreateCard, onUpdateCard, onDele
         );
         console.debug('[ChatSidebar] handleSend: validArticles', validArticles);
         if (validArticles.length > 0) {
-          // Create a unique ID for this card
-          const cardId = Date.now();
+          // Create a unique ID using a timestamp + random suffix to ensure uniqueness
+          const cardId = Date.now() + Math.floor(Math.random() * 1000);
+          console.debug('[ChatSidebar] handleSend: generated cardId', cardId);
+          
           // Format articles for compatibility with both React and vanilla JS
-          const formattedArticles = validArticles.map((article, i) => ({
-            id: cardId + i + 1, // Ensure unique IDs for each article
-            title: article.title,
-            category: getCategoryFromArticle(article),
-            source: article.source?.name || 'Unknown',
-            date: article.publishedAt ? new Date(article.publishedAt).toISOString().split('T')[0] : '',
-            summary: article.description || 'No description available',
-            url: article.url,
-            publishedAt: article.publishedAt
-          }));
+          const formattedArticles = validArticles.map((article, i) => {
+            const articleId = cardId + i + 1; // Ensure unique IDs for each article
+            console.debug('[ChatSidebar] handleSend: formatting article', { index: i, id: articleId });
+            return {
+              id: articleId,
+              title: article.title,
+              category: getCategoryFromArticle(article),
+              source: article.source?.name || 'Unknown',
+              date: article.publishedAt ? new Date(article.publishedAt).toISOString().split('T')[0] : '',
+              summary: article.description || 'No description available',
+              url: article.url,
+              publishedAt: article.publishedAt,
+              // Add a reference to the parent card to help with debugging
+              cardRef: cardId,
+              queryText: input.slice(0, 50)
+            };
+          });
+          
+          // Extract a more meaningful title from the input
+          const extractedTitle = input.match(/about\s+(.+)/i)?.[1] || // "Tell me about X" -> "X"
+                               input.match(/news\s+(?:about|on)\s+(.+)/i)?.[1] || // "news about X" -> "X"
+                               input.match(/show\s+me\s+(?:news\s+)?(?:about|on)\s+(.+)/i)?.[1] || // "show me news about X" -> "X"
+                               input.slice(0, 40); // Fallback to truncated input
+          
+          // Create a distinctive title by adding the timestamp
+          const distinctTitle = `${extractedTitle} (${new Date().toLocaleTimeString()})`;
+          
           // Create a properly structured card for both React and vanilla JS
           const newCard = {
             id: cardId,
-            title: input.match(/about\s+(.+)/i)?.[1] || input,
+            title: distinctTitle,
             category: getCategoryFromInput(input),
             source: 'News API',
             date: new Date().toISOString().split('T')[0],
             summary: explanation || 'Created from chat query',
-            articles: formattedArticles
+            articles: formattedArticles,
+            originalQuery: input,
+            timestamp: new Date().toISOString()
           };
-          console.debug('[ChatSidebar] handleSend: newCard', newCard);
+          console.debug('[ChatSidebar] handleSend: prepared newCard', newCard);
+          
           // Try to add the card and only show success if it is actually added
           const addResult = onCreateCard(newCard);
           console.debug('[ChatSidebar] handleSend: onCreateCard result', addResult);

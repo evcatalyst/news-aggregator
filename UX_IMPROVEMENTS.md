@@ -1,5 +1,21 @@
 # News Aggregator UX Improvements
 
+## June 11, 2025
+
+### Date Formatting Improvements
+
+1. **Consistent Date Display**
+   - Implemented standardized date formatting across all tables
+   - Added localized date display formats using Luxon
+   - Enhanced readability with human-friendly date formats
+   - Improved sorting of date columns
+
+2. **Error Resilience**
+   - Added graceful fallbacks for date parsing errors
+   - Implemented placeholder text for invalid dates
+   - Enhanced error detection and recovery
+   - Added debug logs for date formatting issues
+
 ## June 10, 2025
 
 ### UI Consistency and Mobile Responsiveness

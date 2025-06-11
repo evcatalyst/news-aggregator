@@ -63,6 +63,7 @@ Key Fixes Applied:
 
 ## Current Architecture
 - **Grid Solution:** Tabulator is the canonical data grid for all news table rendering. ag-Grid is fully removed. (Project migration, June 2025)
+- **Date Formatting:** Tabulator uses Luxon library for date formatting. Custom `luxonDatetime` formatter with fallbacks provides reliable date display. (Update, June 11, 2025)
 - **Entry Point:** `app.js` is the only supported frontend entry point. `app_enhanced.js` is archived for historical reference. (Project migration, June 2025)
 - **Modularization:** Main app logic is split into `app.js`, `state.js`, `ui.js`, `api.js`, and `utils.js` for maintainability. (Project refactor, June 2025)
 - **Testing:** Playwright tests target Tabulator and chat/news card flow (`tabulator.test.js`). (Testing update, June 2025)

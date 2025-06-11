@@ -6,7 +6,7 @@ const { defineConfig, devices } = require('@playwright/test');
  */
 module.exports = defineConfig({
   testDir: './.',
-  testMatch: '**/*.test.js',
+  testMatch: '**/src/__tests__/e2e/**/*.test.js',
   
   /* Run tests in files in parallel */
   fullyParallel: true,
@@ -36,7 +36,10 @@ module.exports = defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: { 
+        ...devices['iPhone 12'],
+        viewport: { width: 390, height: 844 },
+      },
     },
   ],
 
