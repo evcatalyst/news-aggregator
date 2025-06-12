@@ -18,10 +18,18 @@
 </head>
 <body class="bg-slate-50 min-h-screen dark:bg-gray-900">
   <div id="root"></div>
-  <!-- Load Luxon before Tabulator -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/luxon/3.6.1/luxon.min.js"></script>
+  <!-- Load Luxon before Tabulator (fixed URL) -->
+  <script src="https://cdn.jsdelivr.net/npm/luxon@3.3.0/build/global/luxon.min.js"></script>
   <script src="https://unpkg.com/tabulator-tables@6.3.0/dist/js/tabulator.min.js"></script>
-  <script type="module" src="/src/tabulator-init.js"></script>
+  <!-- Initialize Tabulator with luxon -->
+  <script>
+    // Make sure Luxon is available for Tabulator
+    if (window.luxon && !window.DateTime) {
+      window.DateTime = window.luxon.DateTime;
+    }
+    // Debug output
+    console.log("Luxon loaded:", window.luxon ? "Yes" : "No");
+  </script>
   <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>

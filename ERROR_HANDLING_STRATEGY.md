@@ -1,8 +1,37 @@
 # API Error Handling & Resilience Strategy
 
-This document outlines the error handling and fallback strategies implemented in the news aggregator application to handle Grok API errors and ensure a consistent user experience.
+This document outlines the error handling and fallback strategies implemented in the news aggregator application to handle API errors and ensure a consistent user experience.
+
+## Application Architecture (June 10, 2025)
+
+The application now follows a modular architecture with dedicated error handling at each layer:
+
+1. **State Management (state.js)**
+   - Centralized error state tracking
+   - Error notification system via observer pattern
+   - State recovery mechanisms
+
+2. **API Layer (api.js)**
+   - Client-side caching to reduce API dependency
+   - Standardized error handling across all endpoints
+   - Authentication token management
+
+3. **UI Layer (ui.js)**
+   - Consistent error message display
+   - Loading states and user feedback
+   - Retry mechanisms for failed operations
+
+4. **Utils (utils.js)**
+   - Robust utility functions with error handling
+   - Fallback implementations for critical functions
 
 ## Server-Side Error Handling (proxy/server.js)
+
+### Enhanced Caching & Fallbacks (June 10, 2025)
+   - Implemented server-side caching with 5-minute TTL
+   - Always returns a response even when APIs fail
+   - Enhanced keyword extraction with improved stopword filtering
+   - Better query parameter sanitization
 
 ### Grok API Integration
 
@@ -14,11 +43,13 @@ This document outlines the error handling and fallback strategies implemented in
    - Pattern 1: "about X" extraction
    - Pattern 2: "show me X news" extraction  
    - Pattern 3: "create a card about X" extraction
-   - Keyword extraction from prompt as final fallback
+   - Enhanced keyword extraction from prompt as final fallback
 
 3. **NewsAPI Fallback Strategies**
    - Strategy 1: Fallback to top headlines when specific search fails
    - Strategy 2: Try broader queries using only first keyword
+   - Strategy 3: Return cached results when available
+   - Strategy 4: Always create a card even with empty results
    - Strategy 3: Category-based search for common topics
 
 4. **Response Error Classification**

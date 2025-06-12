@@ -19,6 +19,31 @@ Summary:
 - Added ability to pin, update, and remove cards.
 - Sidebar: debug toggle, smaller font, card action controls (create/update with dropdown), removed company icon/reference.
 - Debugging is on by default in dev, toggle in sidebar.
+
+---
+
+2025-06-10
+Intent: Major refactoring to modularize the application, fix card creation bugs, and optimize API usage.
+Summary:
+- Completely restructured the frontend with a modular architecture:
+  - Created state.js for centralized state management with observer pattern
+  - Created api.js for API communication with caching
+  - Created ui.js for DOM rendering and manipulation
+  - Created utils.js for shared utilities
+  - Streamlined app.js as the entry point and initialization module
+- Fixed critical bugs:
+  - Cards now created properly for all search queries (including "cats")
+  - Improved state tracking to prevent duplicate/missing cards
+  - Enhanced pagination controls visibility
+- Optimized backend:
+  - Added server-side caching to reduce API calls
+  - Implemented proper pagination for large datasets
+  - Improved error handling with fallbacks
+  - Enhanced keyword extraction for better search results
+- Documentation updates:
+  - Updated ARCHITECTURE.md with new modular architecture
+  - Updated BUGLOG.md to reflect fixed issues
+  - Added architecture diagram to README.md
 Files changed: frontend/app.js, frontend/package.json, frontend/index.html, README.md
 
 2025-06-08
@@ -63,7 +88,7 @@ Key Fixes Applied:
 
 ## Current Architecture
 - **Grid Solution:** Tabulator is the canonical data grid for all news table rendering. ag-Grid is fully removed. (Project migration, June 2025)
-- **Date Formatting:** Tabulator uses Luxon library for date formatting. Custom `luxonDatetime` formatter with fallbacks provides reliable date display. (Update, June 11, 2025)
+- **Date Formatting:** All date formatting for Tabulator is now handled natively in JavaScript (see `formatDateSafe`). No external libraries required. (Update, June 11, 2025)
 - **Entry Point:** `app.js` is the only supported frontend entry point. `app_enhanced.js` is archived for historical reference. (Project migration, June 2025)
 - **Modularization:** Main app logic is split into `app.js`, `state.js`, `ui.js`, `api.js`, and `utils.js` for maintainability. (Project refactor, June 2025)
 - **Testing:** Playwright tests target Tabulator and chat/news card flow (`tabulator.test.js`). (Testing update, June 2025)

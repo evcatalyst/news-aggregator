@@ -1,0 +1,195 @@
+// Main application entry point for the news aggregator
+import { AppState, subscribe, setLoading, setError, addSearchResult, addChatMessage, setCurrentUser, setDebugMode } from './state.js';
+import { login, checkAuth, askGrok } from './api.js';
+import { initUI, renderLoginSidebar, renderSidebar, showErrorNotification, updateUIState } from './ui.js';
+import { formatDateSafe, debugLog } from './utils.js';
+
+// Make formatDateSafe globally available
+window.formatDateSafe = formatDateSafe;
+
+// Initialize Tabulator date formatter if available
+if (window.Tabulator) {
+  try {
+    window.Tabulator.prototype.formatters.simpleDatetime = function(cell, formatterParams) {
+      return formatDateSafe(cell.getValue());
+    };
+    console.log("Added simple datetime formatter to Tabulator");
+  } catch (e) {
+    console.error("Failed to add formatter to Tabulator:", e);
+  }
+}
+
+// Retry mechanism
+let lastOperation = null;
+
+/**
+ * Retry the last operation
+ */
+async function retryLastOperation() {
+  if (!lastOperation) return;
+  setError(false, '');
+  await lastOperation();
+}
+
+// Export retryLastOperation to global scope for use by UI components
+window.retryLastOperation = retryLastOperation;
+
+/**
+ * Handle login form submission
+ */
+async function handleLogin() {
+  const username = document.getElementById('login-username').value;
+  const password = document.getElementById('login-password').value;
+  const loginError = document.getElementById('login-error');
+  
+  try {
+    setLoading(true);
+    const user = await login(username, password);
+    setCurrentUser(user);
+    renderSidebar();
+    updateUIState();
+  } catch (e) {
+    showErrorNotification('Login failed.');
+    if (loginError) loginError.textContent = 'Login failed.';
+  } finally {
+    setLoading(false);
+  }
+}
+
+/**
+ * Process user prompt with Grok API and create a new card
+ */
+async function handleAskGrok() {
+  const inputElem = document.getElementById('grok-input');
+  const responseElem = document.getElementById('grok-response');
+  const prompt = inputElem.value.trim();
+  
+  if (!prompt) {
+    responseElem.textContent = 'Please enter a question.';
+    return;
+  }
+  
+  responseElem.textContent = 'Thinking...';
+  inputElem.disabled = true;
+  setLoading(true);
+  
+  try {
+    // Save the operation for retry functionality
+    lastOperation = handleAskGrok;
+    
+    // Call the Grok API
+    const data = await askGrok(prompt);
+    
+    // Add to chat history
+    addChatMessage(prompt, data.response);
+    
+    // Always create a new card with the results, even if empty
+    // This fixes the bug where some queries didn't create cards
+    const newCard = addSearchResult({
+      id: Date.now() + Math.floor(Math.random() * 1000),
+      title: prompt,
+      articles: data.newsResults || [],
+      explanation: data.response,
+      originalQuery: prompt,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Debug logging
+    if (AppState.debug) {
+      debugLog('Created new card:', {
+        id: newCard.id,
+        title: newCard.title,
+        articleCount: newCard.articles.length
+      });
+    }
+    
+    // Update UI
+    renderSidebar();
+    updateUIState();
+    
+    // Clear input and response
+    responseElem.textContent = '';
+    inputElem.value = '';
+    
+    // Show confirmation of card creation
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) {
+      const msg = document.createElement('div');
+      msg.className = 'mt-2 text-green-700 text-xs';
+      msg.textContent = '✅ New card created.';
+      sidebar.appendChild(msg);
+      setTimeout(() => { if (msg.parentNode) msg.parentNode.removeChild(msg); }, 3000);
+    }
+  } catch (err) {
+    setError(true, err.message);
+    showErrorNotification('Error: ' + err.message);
+    responseElem.textContent = 'Error: ' + err.message;
+  } finally {
+    setLoading(false);
+    inputElem.disabled = false;
+  }
+}
+
+/**
+ * Initialize the application
+ */
+async function initApp() {
+  initUI();
+  
+  // Check authentication status
+  const user = await checkAuth();
+  
+  if (!user) {
+    renderLoginSidebar();
+    // Add event listener for login button
+    const loginBtn = document.getElementById('login-btn');
+    if (loginBtn) {
+      loginBtn.addEventListener('click', handleLogin);
+    }
+    return;
+  }
+  
+  // Set current user and render UI
+  setCurrentUser(user);
+  renderSidebar();
+  updateUIState();
+  
+  // Add event listener for ask button
+  document.addEventListener('click', event => {
+    if (event.target.id === 'grok-btn') {
+      handleAskGrok();
+    } else if (event.target.id === 'debug-toggle') {
+      setDebugMode(event.target.checked);
+    } else if (event.target.id === 'sidebar-min-btn') {
+      // Toggle sidebar minimized state
+      const sidebar = document.getElementById('sidebar');
+      if (sidebar.style.width === '32px') {
+        sidebar.style.width = '180px';
+        sidebar.style.minWidth = '120px';
+        sidebar.style.maxWidth = '400px';
+        sidebar.style.padding = '0.7rem 0.5rem';
+        renderSidebar();
+      } else {
+        sidebar.style.width = '32px';
+        sidebar.style.minWidth = '32px';
+        sidebar.style.maxWidth = '32px';
+        sidebar.style.padding = '0.5rem 0.2rem';
+        sidebar.innerHTML = `<button id="sidebar-min-btn" class="absolute top-2 right-2 text-xs text-gray-400 hover:text-blue-600 z-10" title="Expand Sidebar" style="background:none;border:none;">▶</button>`;
+      }
+    }
+  });
+  
+  // Add keyboard shortcut for submitting prompt
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+      const grokInput = document.getElementById('grok-input');
+      if (grokInput === document.activeElement) {
+        handleAskGrok();
+        event.preventDefault();
+      }
+    }
+  });
+}
+
+// Initialize the app when the page loads
+window.onload = initApp;

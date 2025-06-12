@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dog Query Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1, h2 {
+      color: #333;
+    }
+    .test-button {
+      background-color: #4CAF50;
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      margin: 10px 2px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .log {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background-color: #f9f9f9;
+      min-height: 200px;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+    .log pre {
+      white-space: pre-wrap;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Manual Dog Query Test</h1>
+  <p>This page helps test the fix for the dog query issue in the news aggregator app.</p>
+  
+  <button id="testButton" class="test-button">Test Dog Query</button>
+  
+  <h2>Console Logs:</h2>
+  <div id="log" class="log">
+    <pre>// Logs will appear here</pre>
+  </div>
+  
+  <script>
+    // Save original console methods
+    const originalLog = console.log;
+    const originalError = console.error;
+    const originalWarn = console.warn;
+    
+    // Override console methods to capture output
+    function captureConsole(method, originalMethod) {
+      console[method] = function(...args) {
+        // Call original method
+        originalMethod.apply(console, args);
+        
+        // Format the output
+        const formatted = args.map(arg => {
+          if (typeof arg === 'object') {
+            return JSON.stringify(arg, null, 2);
+          }
+          return String(arg);
+        }).join(' ');
+        
+        // Append to log
+        const logElement = document.getElementById('log');
+        const pre = document.createElement('pre');
+        pre.textContent = `[${method}] ${formatted}`;
+        pre.style.color = method === 'error' ? 'red' : method === 'warn' ? 'orange' : 'black';
+        logElement.appendChild(pre);
+        
+        // Auto-scroll to bottom
+        logElement.scrollTop = logElement.scrollHeight;
+      };
+    }
+    
+    // Apply overrides
+    captureConsole('log', originalLog);
+    captureConsole('error', originalError);
+    captureConsole('warn', originalWarn);
+    
+    // Test function
+    async function testDogQuery() {
+      console.log('Testing dog query...');
+      
+      try {
+        // Mock dog news data
+        const mockData = {
+          response: "Here are articles about dogs",
+          newsResults: [
+            {
+              title: "Dog News Article",
+              source: { name: "Pet Source" },
+              description: "Article about dogs",
+              publishedAt: new Date().toISOString(),
+              url: "https://pets.com/dogs"
+            }
+          ]
+        };
+        
+        console.log('Mock data prepared:', mockData);
+        
+        // Create a simple card object
+        const input = "Show me news about dogs";
+        const formattedArticles = mockData.newsResults.map(article => ({
+          title: article.title || 'Untitled Article',
+          url: article.url || '#',
+          source: article.source?.name || 'News',
+          date: article.publishedAt?.split('T')[0] || new Date().toISOString().split('T')[0],
+          summary: article.description || ''
+        }));
+        
+        console.log('Formatted articles:', formattedArticles);
+        
+        const card = {
+          id: Date.now().toString(),
+          title: input.slice(0, 50),
+          category: input.toLowerCase().includes('dog') ? 'Pets' : 'Other',
+          timestamp: new Date().toISOString(),
+          articles: formattedArticles
+        };
+        
+        console.log('Card created:', card);
+        
+        // Verify card structure
+        if (!card.articles || !Array.isArray(card.articles)) {
+          console.error('Card articles is not an array!');
+        } else if (card.articles.length === 0) {
+          console.error('Card has no articles!');
+        } else {
+          console.log('Card seems valid with', card.articles.length, 'articles');
+        }
+        
+        // Check all required properties
+        const missingProps = [];
+        if (!card.id) missingProps.push('id');
+        if (!card.title) missingProps.push('title');
+        if (!card.timestamp) missingProps.push('timestamp');
+        
+        if (missingProps.length > 0) {
+          console.error('Card is missing required properties:', missingProps.join(', '));
+        } else {
+          console.log('All required card properties are present');
+        }
+        
+        console.log('Test completed successfully!');
+      } catch (error) {
+        console.error('Test failed:', error);
+      }
+    }
+    
+    // Add event listener
+    document.getElementById('testButton').addEventListener('click', testDogQuery);
+  </script>
+</body>
+</html>

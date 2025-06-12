@@ -1,11 +1,13 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig({
+// https://vitejs.dev/config/
+export default defineConfig(({ command, mode }) => ({
   plugins: [react()],
-  css: {
-    postcss: {
-      plugins: [require('tailwindcss'), require('autoprefixer')],
-    },
+  define: {
+    'process.env.NODE_ENV': JSON.stringify(mode)
   },
-});
+  build: {
+    sourcemap: mode === 'development'
+  }
+}));

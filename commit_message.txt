@@ -1,0 +1,24 @@
+feat(ui): Add card management commands and help tooltip
+
+- Add natural language commands for card management in chat interface
+  - Delete cards: "delete the new card"
+  - Minimize/Expand: "minimize this card", "expand card"
+  - Resize: "make card compact/normal/expanded"
+  
+- Add HelpTooltip component showing available commands
+  - Hover-activated tooltip in chat header
+  - Clear examples for each command type
+  - Responsive design with dark mode support
+  
+- Update state management for card operations
+  - Add updateCard() for card property changes
+  - Add deleteCard() for removing cards
+  - Add debug logging for card operations
+  
+- Update documentation in ARCHITECTURE.md
+  - Document new card management features
+  - Add command examples and usage notes
+
+The changes improve user experience by adding intuitive
+card management through natural language commands,
+with clear documentation and visual help.

@@ -1,7 +1,9 @@
+/** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
     "./index.html",
     "./src/**/*.{js,jsx,ts,tsx}",
+    "./components/**/*.{js,jsx,ts,tsx}",
   ],
   darkMode: 'class', // Enable class-based dark mode
   theme: {
@@ -29,6 +31,11 @@ module.exports = {
       },
       screens: {
         'xs': '480px', // Add extra small breakpoint
+      },
+      lineClamp: {
+        1: '1',
+        2: '2',
+        3: '3',
       },
     },
   },

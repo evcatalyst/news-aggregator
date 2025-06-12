@@ -67,15 +67,57 @@ app.post('/me', (req, res) => {
   res.json(sessions[token]);
 });
 
+// In-memory cache for news API responses
+const newsCache = {
+  data: new Map(),
+  maxAge: 5 * 60 * 1000, // 5 minutes cache duration
+  
+  // Set item in cache
+  set: function(key, value) {
+    console.log(`[Cache] Setting cache for key: ${key}`);
+    this.data.set(key, {
+      timestamp: Date.now(),
+      value: value
+    });
+  },
+  
+  // Get item from cache
+  get: function(key) {
+    const entry = this.data.get(key);
+    if (!entry) return null;
+    
+    // Check if cache entry is expired
+    if (Date.now() - entry.timestamp > this.maxAge) {
+      console.log(`[Cache] Expired cache for key: ${key}`);
+      this.data.delete(key);
+      return null;
+    }
+    
+    console.log(`[Cache] Cache hit for key: ${key}`);
+    return entry.value;
+  }
+};
+
 app.get('/news', async (req, res) => {
   try {
     const q = req.query.q;
     const from = req.query.from;
     const to = req.query.to;
     const sources = req.query.sources;
-    // Pagination params
+    // Enhanced pagination params
     const page = parseInt(req.query.page, 10) || 1;
     const pageSize = parseInt(req.query.pageSize, 10) || 20;
+    
+    // Generate cache key based on query params
+    const cacheKey = `news_${q || ''}_${from || ''}_${to || ''}_${sources || ''}_${page}_${pageSize}`;
+    
+    // Check cache first
+    const cachedData = newsCache.get(cacheKey);
+    if (cachedData) {
+      console.log(`[News API] Serving from cache for page ${page}, size ${pageSize}`);
+      return res.json(cachedData);
+    }
+    
     // Only allow NewsAPI-supported params
     const params = {
       apiKey: NEWS_API_KEY,
@@ -86,6 +128,7 @@ app.get('/news', async (req, res) => {
     if (from) params.from = from;
     if (to) params.to = to;
     if (sources) params.sources = sources;
+    
     // Remove unsupported params (sortBy, language) for /v2/everything fallback
     // If no q, fallback to /v2/top-headlines with country: 'us'
     let url = 'https://newsapi.org/v2/everything';
@@ -93,17 +136,36 @@ app.get('/news', async (req, res) => {
       url = 'https://newsapi.org/v2/top-headlines';
       params.country = 'us';
     }
-    const response = await axios.get(url, { params });
-    // Tabulator expects { data: [...], last_page: N, total_count: N }
+    
+    console.log(`[News API] Fetching from API for page ${page}, size ${pageSize}`);
+    const response = await axios.get(url, { 
+      params,
+      timeout: 10000 // 10 second timeout
+    });
+    
+    // Process response for Tabulator
     const totalResults = response.data.totalResults || 0;
     const lastPage = Math.ceil(totalResults / pageSize);
-    res.json({
+    
+    // Prepare result
+    const result = {
       data: response.data.articles || [],
       last_page: lastPage,
       total_count: totalResults
-    });
+    };
+    
+    // Save to cache
+    newsCache.set(cacheKey, result);
+    
+    // Send response
+    res.json(result);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch news', details: error?.response?.data || error.message || error });
+    console.error('[News API Error]', error?.response?.data || error.message);
+    res.status(500).json({ 
+      error: 'Failed to fetch news', 
+      details: error?.response?.data || error.message || error,
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
@@ -117,26 +179,47 @@ app.post('/grok', async (req, res) => {
     
     // Extract keywords directly from the user prompt as a fallback
     const extractKeywords = (prompt) => {
+      // Improved keyword extraction with better stop word filtering
+      const stopWords = ['about', 'what', 'when', 'where', 'which', 'who', 'why', 'how', 
+                        'could', 'would', 'should', 'news', 'articles', 'latest', 
+                        'can', 'find', 'tell', 'me', 'please', 'get', 'show'];
+                        
       const words = prompt.toLowerCase()
         .replace(/[^\w\s]/g, '')
         .split(/\s+/)
         .filter(w => w.length > 3)
-        .filter(w => !['about', 'what', 'when', 'where', 'which', 'who', 'why', 'how', 'could', 'would', 'should', 'news', 'articles', 'latest'].includes(w));
+        .filter(w => !stopWords.includes(w));
+      
+      // Ensure we always get at least one keyword, even if it's short
+      if (words.length === 0) {
+        return prompt.toLowerCase()
+          .replace(/[^\w\s]/g, '')
+          .split(/\s+/)
+          .filter(w => w.length >= 2)
+          .filter(w => !['a', 'an', 'the', 'in', 'on', 'at', 'to', 'for', 'of'].includes(w))
+          .slice(0, 3)
+          .join(' ');
+      }
       
       return words.slice(0, 3).join(' ');
     };
     
-    let newsapi_query = {};
-    let explanation = '';
+    // Always initialize with a fallback query from extracted keywords
+    // This ensures we always have a query even if the API call fails
+    let newsapi_query = {
+      q: extractKeywords(userPrompt)
+    };
+    let explanation = `Here are news results about "${newsapi_query.q}"`;
     
     try {
       // Don't attempt to call Grok API if no valid API key is provided
       if (!XAI_API_KEY || XAI_API_KEY === 'your_xai_grok_key_here') {
         throw new Error('No valid Grok API key provided. Please add your key to .env file.');
       }
-      // System prompt for Grok
+      // Enhanced system prompt for Grok
       const systemPrompt = `You are an assistant that helps users find relevant news articles.\n` +
         `Given the user's request, extract the main topic, location, and any relevant keywords.\n` +
+        `IMPORTANT: Always return a specific search query in the "q" field.\n` +
         `Return your response as a JSON object with the following format:\n` +
         `{"newsapi_query": {"q": <keywords>, "from": <YYYY-MM-DD, optional>, "to": <YYYY-MM-DD, optional>, "sources": <comma-separated sources, optional>}, "explanation": <short explanation for the user>}` +
         `\nOnly return the JSON object, no extra text.`;
@@ -189,37 +272,82 @@ app.post('/grok', async (req, res) => {
       console.error('Error contacting Grok API:', grokError.message);
       return res.status(503).json({ error: 'Grok is unavailable. Please try again later.', details: grokError.message });
     }
+    // Cache key for this query
+    const newsCacheKey = `grok_news_${JSON.stringify(newsapi_query)}`;
+    
     let newsResults = [];
     try {
-      const params = { apiKey: NEWS_API_KEY };
-      if (newsapi_query.q) params.q = newsapi_query.q;
-      if (newsapi_query.from) params.from = newsapi_query.from;
-      if (newsapi_query.to) params.to = newsapi_query.to;
-      if (newsapi_query.sources) params.sources = newsapi_query.sources;
-      let url = 'https://newsapi.org/v2/everything';
-      if ((!params.q || params.q.trim() === '') && !params.from && !params.to && !params.sources) {
-        url = 'https://newsapi.org/v2/top-headlines';
-        params.country = 'us';
-      }
-      if (params.q) {
-        params.q = params.q.replace(/[^\w\s]/g, ' ').trim();
-        if (params.q.length > 100) {
-          params.q = params.q.substring(0, 100);
+      // Check if we have cached results first
+      const cachedResults = newsCache.get(newsCacheKey);
+      if (cachedResults) {
+        console.log('[Grok] Using cached news results');
+        newsResults = cachedResults;
+      } else {
+        console.log('[Grok] Fetching fresh news results');
+        const params = { apiKey: NEWS_API_KEY };
+        
+        // Always ensure we have a query parameter
+        if (newsapi_query.q) {
+          params.q = newsapi_query.q;
+        } else {
+          params.q = extractKeywords(userPrompt);
+          console.log(`[Grok] No query provided, using extracted keywords: ${params.q}`);
+        }
+        
+        if (newsapi_query.from) params.from = newsapi_query.from;
+        if (newsapi_query.to) params.to = newsapi_query.to;
+        if (newsapi_query.sources) params.sources = newsapi_query.sources;
+        
+        let url = 'https://newsapi.org/v2/everything';
+        if ((!params.q || params.q.trim() === '') && !params.from && !params.to && !params.sources) {
+          url = 'https://newsapi.org/v2/top-headlines';
+          params.country = 'us';
+        }
+        
+        // Sanitize query parameter to avoid errors
+        if (params.q) {
+          params.q = params.q.replace(/[^\w\s]/g, ' ').trim();
+          if (params.q.length > 100) {
+            params.q = params.q.substring(0, 100);
+          }
+        }
+        
+        console.log(`[Grok] Fetching news with params:`, params);
+        
+        const newsResp = await axios.get(url, { 
+          params,
+          timeout: 10000 // 10 second timeout
+        });
+        
+        newsResults = newsResp.data.articles || [];
+        
+        // Cache the results if we got some
+        if (newsResults.length > 0) {
+          newsCache.set(newsCacheKey, newsResults);
         }
       }
-      const newsResp = await axios.get(url, { 
-        params,
-        timeout: 10000 // 10 second timeout
-      });
-      newsResults = newsResp.data.articles || [];
     } catch (err) {
       console.error('Failed to fetch news for Grok:', err?.response?.data || err.message || err);
+      
+      // Send a more informative error message but still return what we have
+      explanation += `. Note: There was an issue fetching the latest news articles, but I'll show you what I can.`;
     }
-    res.json({
+    
+    // Enhanced response with better metadata
+    const response = {
       response: explanation,
       newsQuery: newsapi_query,
-      newsResults
-    });
+      newsResults,
+      metadata: {
+        timestamp: new Date().toISOString(),
+        querySuccessful: true,
+        resultCount: newsResults.length,
+        originalPrompt: userPrompt
+      }
+    };
+    
+    console.log(`[Grok] Returning ${newsResults.length} results`);
+    res.json(response);
     console.log('--- GROK PROXY DEBUG END ---');
   } catch (error) {
     console.error('Error contacting Grok:', error?.response?.data || error.message || error);

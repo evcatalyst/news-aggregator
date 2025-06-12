@@ -1,18 +1,18 @@
 # News Aggregator
 
-A modern news dashboard with Tabulator data visualization, Node.js/Express proxy, Tailwind CSS, and Docker support. Features AI-powered chat interface with Grok for intelligent news filtering and analysis.
+A modern news dashboard featuring AI-powered content aggregation, interactive data visualization, and real-time filtering capabilities.
 
----
+## Overview
 
-## Features
-- **🔒 Secure API Proxy**: NewsAPI and xAI (Grok) proxy to keep your API keys secure
-- **🤖 AI-Powered Chat**: Grok integration for intelligent news filtering and analysis
-- **📊 Advanced Data Grid**: Tabulator for sortable, filterable news display
-- **🎨 Modern UI**: Tailwind CSS with responsive design
-- **🐳 Dockerized**: Complete containerized development environment
-- **⚡ Hot Reload**: Docker Compose develop mode for instant code changes
-- **🧪 Automated Testing**: Playwright integration tests for reliability
-- **🛠️ Developer Tools**: One-click rebuild script and debugging features
+The News Aggregator is a sophisticated web application that combines advanced news filtering with AI-driven content analysis. Built with modern web technologies and containerized for consistent development and deployment.
+
+## Core Features
+
+- **AI-Enhanced Search**: Intelligent news filtering and analysis through Grok integration
+- **Dynamic Content Cards**: Unified presentation of related news articles
+- **Advanced Data Visualization**: Interactive tables with sorting, filtering, and custom views
+- **Secure API Layer**: Proxied access to NewsAPI and xAI services
+- **Modern UI/UX**: Responsive design with dark mode support
 
 ---
 
@@ -22,6 +22,33 @@ A modern news dashboard with Tabulator data visualization, Node.js/Express proxy
 - **Testing**: Playwright
 - **Infrastructure**: Docker Compose, ARM64/Apple Silicon optimized
 - **APIs**: NewsAPI, xAI (Grok)
+
+## Architecture Overview
+The application follows a modular architecture pattern:
+
+```
+┌─────────────────────────────┐      ┌───────────────────────┐
+│       Frontend              │      │       Backend         │
+│  ┌─────────┐  ┌─────────┐   │      │                       │
+│  │  app.js │─▶│ state.js│   │      │                       │
+│  └─────┬───┘  └────┬────┘   │      │                       │
+│        │           │        │      │                       │
+│  ┌─────▼───┐  ┌────▼────┐   │      │  ┌────────────────┐   │
+│  │  ui.js  │◀─▶│ api.js  │───┼─────┼─▶│    server.js   │   │
+│  └─────┬───┘  └───┬─────┘   │      │  └───────┬────────┘   │
+│        │          │         │      │          │            │
+│  ┌─────▼──────────▼────┐    │      │  ┌───────▼────────┐   │
+│  │     utils.js        │    │      │  │  News & Grok   │   │
+│  └────────────────────┘    │      │  │     APIs        │   │
+└─────────────────────────────┘      └───────────────────────┘
+```
+
+- **app.js**: Application initialization and event handling
+- **state.js**: Centralized state management with observer pattern
+- **ui.js**: UI rendering and DOM manipulation
+- **api.js**: API communication with caching
+- **utils.js**: Shared utilities
+- **server.js**: Backend proxy with caching and optimizations
 
 ---
 
@@ -77,14 +104,18 @@ news-aggregator/
 ├── TODO.md                     # Planned improvements and tasks
 ├── architecture_notes.txt      # Technical decisions & changelog
 ├── proxy/                      # Backend API server
-│   ├── server.js              # Express.js application
+│   ├── server.js              # Express.js application with caching and pagination
 │   ├── package.json           # Node.js dependencies
 │   ├── .env                   # API keys (you create this)
 │   ├── Dockerfile             # Container definition
 │   └── rebuild_stack.sh       # Development automation script
 └── frontend/                   # Frontend application
     ├── index.html             # Main HTML page
-    ├── app.js                 # Application logic
+    ├── app.js                 # Application initialization and main logic
+    ├── state.js               # Centralized state management
+    ├── api.js                 # API communication and caching
+    ├── ui.js                  # User interface rendering
+    ├── utils.js               # Utility functions
     ├── tailwind.css           # Compiled Tailwind styles
     ├── input.css              # Tailwind source
     ├── package.json           # npm dependencies (Tabulator, Playwright)
@@ -228,6 +259,11 @@ docker compose down
 - Check API keys are valid and have proper permissions
 - Test health endpoint: `curl http://localhost:3000/health`
 
+#### ❌ Tabulator Date Formatting Issues
+**Fixed in latest version!** Date formatting is now handled natively in JavaScript. Luxon is no longer required.
+- If you still see date issues, check your browser cache and ensure you are running the latest code.
+- See the `formatDateSafe` utility in `frontend/src/utils/dateUtils.js` for details.
+
 ### 🐞 Debug Mode
 - Debug logging is enabled by default in development
 - Toggle debug in the frontend sidebar
@@ -270,6 +306,11 @@ docker compose down
 ---
 
 ## Recent Updates & Fixes
+
+### ✅ 2025-06-11 - Native Date Formatting (No Luxon)
+- **Removed Luxon dependency for all date formatting in Tabulator.**
+- All date columns now use a native JavaScript formatter for reliability.
+- See `frontend/src/utils/dateUtils.js` for the new implementation.
 
 ### ✅ 2025-06-11 - Tabulator Luxon Integration Fix
 **Resolved Tabulator datetime formatting issues:**
@@ -407,6 +448,18 @@ sequenceDiagram
   - frontend/tabulator.test.js
   - README.md
 
+### 2025-06-11
+- **Intent:** Resolve date formatting issues and remove Luxon dependency.
+- **Summary:**
+  - All date formatting is now handled natively in JavaScript in Tabulator.
+  - Removed Luxon-related code and dependencies.
+  - Added `formatDateSafe` utility in `frontend/src/utils/dateUtils.js` for safe date formatting.
+  - Updated documentation to reflect native date handling.
+- **Files Changed:**
+  - frontend/src/utils/dateUtils.js
+  - frontend/app.js
+  - README.md
+
 **Note:** You may see a git warning about a potential secret in `proxy/server.js`. This is a demo value ("notasecret") and not a real credential. It is safe for development purposes.
 
 ---
@@ -432,3 +485,14 @@ If you encounter issues with card creation:
 3. Ensure card height and margins are sufficient for pagination controls
 4. Review `BUGLOG.md` for known issues and reproduction steps
 5. Check `TODO.md` for planned improvements
+
+### ⚡ 2025-06-11 - Date Formatting Now Native (No Luxon Required)
+- **No more Luxon dependency for date formatting in Tabulator!**
+- All date formatting is now handled natively in JavaScript for maximum reliability.
+- If you see any date formatting issues, check the new `formatDateSafe` utility in `frontend/src/utils/dateUtils.js`.
+- The code and documentation have been updated to reflect this change.
+
+#### Troubleshooting Tabulator Date Columns
+- If dates do not display, ensure you are using the latest code and have cleared your browser cache.
+- The formatter for date columns is now a simple inline function or uses `formatDateSafe`.
+- No external date libraries are required for correct display.

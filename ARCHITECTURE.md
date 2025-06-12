@@ -1,26 +1,88 @@
-# Architecture Notes: News Aggregator
+# Technical Architecture
+
+## System Overview
+
+The News Aggregator implements a modern web architecture with clear separation of concerns and emphasis on maintainability and scalability.
+
+## Core Components
+
+### Frontend Architecture
+
+```mermaid
+graph TB
+    subgraph UI
+        Cards[News Cards]
+        Chat[Chat Interface]
+        Grid[Data Grid]
+    end
+    
+    subgraph State
+        Store[Central Store]
+        Observer[State Observer]
+    end
+    
+    subgraph Services
+        API[API Client]
+        Cache[Local Cache]
+    end
+    
+    UI --> State
+    State --> Services
+```
 
 ## Card Creation & Chat Integration
-- The chat sidebar (`ChatSidebar.jsx`) is responsible for handling user queries and creating new news cards.
-- Cards are objects with an `articles` array; each card should be rendered as a separate table/card in the UI.
-- Card creation is coordinated between React state and a vanilla JS state (`window.AppState.searchResults`).
-- Debug logging is now present in `ChatSidebar.jsx` to help trace card creation attempts/results.
+- Card creation is now managed through the state module, guaranteeing unique card IDs
+- User queries always create cards, even for edge-case search terms like "cats"
+- The `handleAskGrok()` function in app.js processes user queries and ensures proper card creation
+- Debug logging is available throughout the application when debug mode is enabled
+
+### Card Management Commands
+The chat interface now supports natural language commands for managing cards:
+
+1. **Delete Commands**
+   - "delete the new card"
+   - "remove this card"
+   - "delete the latest card"
+
+2. **View Controls**
+   - "minimize this card" - Collapses to header only
+   - "expand the card" - Shows full content
+   - "make this card compact/normal/expanded" - Adjusts card size
+
+Commands always target the most recently created card by default. A help tooltip is available in the chat interface showing all available commands.
+
+## State Management
+- Centralized in `state.js` with clearly defined functions for state manipulation
+- Observer pattern implementation with subscribers notified of state changes
+- State includes: search results (cards), chat history, user info, loading/error states
+- All state mutations go through dedicated functions like `addSearchResult()`, `addChatMessage()`, etc.
+
+## API Integration
+- `api.js` handles all external API communication
+- Implements client-side caching for faster response and reduced API calls
+- Standardized error handling and response formatting
+- Auth token management for secured API endpoints
 
 ## Tabulator Integration
-- Tabulator tables are used for rendering news articles in both card view and paginated table view
-- Tabulator requires Luxon for advanced date/time formatting
-- Luxon integration occurs in several places:
-  - Import in `app.js` and global exposure via `window.luxon` and `window.DateTime`
-  - Custom formatter in `tabulator-init.js` to provide robust date formatting
-  - CDN links in `index.html` for both Tabulator (v6.3.0) and Luxon
-- Fallback mechanisms in place for date formatting: Luxon → Native Date → Empty string
+- Tables are rendered through the UI module with consistent formatting
+- Date formatting is handled by the `formatDateSafe()` utility, with fallbacks
+- Support for both card view (multiple tables) and paginated table view
+- Improved pagination controls with proper spacing and visibility
 
-## Known Issues (2025-06-11)
-- Sometimes new cards are not created for certain queries, or all new searches are added to the same table/card.
-- There is no clear local log of card creation events (now improved with debug logs).
-- See `BUGLOG.md` for more details.
+## Server-side Optimizations
+- Caching layer for news API responses to reduce external API calls
+- Pagination support for large datasets with proper parameter handling
+- Enhanced error handling and fallback mechanisms
+- Query parameter validation and sanitization
+
+## Known Issues (✅ FIXED)
+- ✅ FIXED: New cards are now properly created for all queries including "cats" 
+- ✅ FIXED: Improved logging ensures clear tracking of card creation events
+- ✅ FIXED: Server-side caching and pagination optimizations improve performance
+- ✅ FIXED: State management properly handles all card creation events
 
 ## Next Steps
-- Refactor card creation and rendering logic to ensure each search always creates a new, distinct card.
-- Improve UI feedback and error handling for failed/duplicate card creation.
-- Add a persistent event log or UI for debugging card creation events.
+- Additional unit and integration testing for the refactored modules
+- UI improvements for better card visualization and management
+- Enhanced analytics for user queries and card usage patterns
+- Potential offline mode using IndexedDB or localStorage

@@ -21,28 +21,22 @@ jest.mock('tabulator-tables', () => {
 });
 
 describe('NewsTable Component', () => {
-  const mockOnPin = jest.fn();
-  const mockOnRemove = jest.fn();
-  
-  // Sample news data for testing
-  const sampleNewsArticles = [
+  const mockArticles = [
     {
       id: 1,
       title: 'Test Article 1',
-      category: 'Tech',
       source: 'Test Source',
       date: '2025-06-10',
       summary: 'Test description',
-      url: 'https://test.com/article1'
+      url: 'https://test.com/1'
     },
     {
       id: 2,
       title: 'Test Article 2',
-      category: 'Sports',
-      source: 'Another Source',
+      source: { name: 'Another Source' },
       date: '2025-06-09',
       summary: 'Another description',
-      url: 'https://test.com/article2'
+      url: 'https://test.com/2'
     }
   ];
   
@@ -90,6 +84,13 @@ describe('NewsTable Component', () => {
   
   beforeEach(() => {
     jest.clearAllMocks();
+    
+    // Mock window functions needed for IntersectionObserver
+    window.IntersectionObserver = jest.fn().mockImplementation(() => ({
+      observe: jest.fn(),
+      unobserve: jest.fn(),
+      disconnect: jest.fn()
+    }));
     
     // Mock the DOM element needed for the Tabulator table
     Object.defineProperty(HTMLElement.prototype, 'offsetHeight', { configurable: true, value: 100 });
@@ -161,5 +162,135 @@ describe('NewsTable Component', () => {
     // Verify destroy was called on the Tabulator instance
     const tabulatorInstance = require('tabulator-tables').__getMockInstance();
     expect(tabulatorInstance.destroy).toHaveBeenCalled();
+  });
+  
+  test('initializes Tabulator with proper configuration', () => {
+    render(<NewsTable articles={mockArticles} />);
+    
+    const TabulatorConstructor = require('tabulator-tables').TabulatorFull;
+    const constructorCall = TabulatorConstructor.mock.calls[0][1];
+    
+    expect(constructorCall).toMatchObject({
+      data: mockArticles,
+      height: 350,
+      minHeight: 200,
+      layout: 'fitColumns',
+      responsiveLayout: 'collapse',
+      pagination: 'local',
+      paginationSize: 5,
+      paginationSizeSelector: [5, 10, 20],
+      paginationButtonCount: 3,
+      rowHeight: 36,
+      placeholder: 'No articles available'
+    });
+  });
+
+  test('configures table columns correctly', () => {
+    render(<NewsTable articles={mockArticles} />);
+    
+    const TabulatorConstructor = require('tabulator-tables').TabulatorFull;
+    const { columns } = TabulatorConstructor.mock.calls[0][1];
+    
+    // Title column
+    expect(columns[0]).toMatchObject({
+      title: 'Title',
+      field: 'title',
+      sorter: 'string',
+      headerSort: true,
+      widthGrow: 3,
+      tooltip: 'Article title',
+      cssClass: 'truncate-cell'
+    });
+    
+    // Source column
+    expect(columns[1]).toMatchObject({
+      title: 'Source',
+      field: 'source',
+      sorter: 'string',
+      headerSort: true,
+      widthGrow: 1.5,
+      tooltip: 'News source',
+      cssClass: 'truncate-cell'
+    });
+    
+    // Date column
+    expect(columns[2]).toMatchObject({
+      title: 'Date',
+      field: 'date',
+      sorter: 'date',
+      headerSort: true,
+      widthGrow: 1,
+      tooltip: 'Publication date',
+      cssClass: 'whitespace-nowrap'
+    });
+    
+    // Summary column
+    expect(columns[3]).toMatchObject({
+      title: 'Summary',
+      field: 'summary',
+      sorter: 'string',
+      headerSort: true,
+      widthGrow: 4,
+      tooltip: 'Article summary',
+      cssClass: 'truncate-cell',
+      responsive: 2
+    });
+  });
+
+  test('formats source data correctly', () => {
+    render(<NewsTable articles={mockArticles} />);
+    
+    const TabulatorConstructor = require('tabulator-tables').TabulatorFull;
+    const sourceFormatter = TabulatorConstructor.mock.calls[0][1].columns[1].formatter;
+    
+    // Test string source
+    const stringSourceCell = { getValue: () => 'Test Source' };
+    expect(sourceFormatter(stringSourceCell)).toBe('<span class="text-sm">Test Source</span>');
+    
+    // Test object source
+    const objectSourceCell = { getValue: () => ({ name: 'Another Source' }) };
+    expect(sourceFormatter(objectSourceCell)).toBe('<span class="text-sm">Another Source</span>');
+  });
+
+  test('formats dates correctly', () => {
+    render(<NewsTable articles={mockArticles} />);
+    
+    const TabulatorConstructor = require('tabulator-tables').TabulatorFull;
+    const dateFormatter = TabulatorConstructor.mock.calls[0][1].columns[2].formatter;
+    
+    const validDateCell = { getValue: () => '2025-06-10' };
+    expect(dateFormatter(validDateCell)).toBe('Jun 10, 2025');
+    
+    const invalidDateCell = { getValue: () => 'invalid' };
+    expect(dateFormatter(invalidDateCell)).toBe('invalid');
+  });
+
+  test('handles empty articles array', () => {
+    render(<NewsTable articles={[]} />);
+    
+    const TabulatorConstructor = require('tabulator-tables').TabulatorFull;
+    const constructorCall = TabulatorConstructor.mock.calls[0][1];
+    
+    expect(constructorCall.data).toEqual([]);
+    expect(constructorCall.placeholder).toBe('No articles available');
+  });
+
+  test('sets up intersection observer for pagination', () => {
+    render(<NewsTable articles={mockArticles} />);
+    
+    expect(window.IntersectionObserver).toHaveBeenCalled();
+    expect(window.IntersectionObserver.mock.calls[0][0]).toBeInstanceOf(Function);
+    expect(window.IntersectionObserver.mock.calls[0][1]).toEqual({ threshold: 0.5 });
+  });
+
+  test('handles errors gracefully', () => {
+    // Mock Tabulator to throw error
+    require('tabulator-tables').TabulatorFull.mockImplementationOnce(() => {
+      throw new Error('Tabulator error');
+    });
+    
+    render(<NewsTable articles={mockArticles} />);
+    
+    expect(screen.getByText(/Failed to load articles table: Tabulator error/)).toBeInTheDocument();
   });
 });

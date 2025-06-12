@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import HelpTooltip from './HelpTooltip';
 import '../styles/chat-sidebar.css';
 import { makeChatRequest } from '../utils/apiHelper';
 
@@ -62,147 +63,233 @@ const ChatSidebar = ({ isOpen, toggleSidebar, onCreateCard, onUpdateCard, onDele
     setIsThinking(true);
 
     try {
-      // Only use Grok, no fallback extraction
-      const data = await makeChatRequest(input, {
-        maxRetries: 2,
-        timeout: 20000,
-        useSimplification: true
-      });
-      
+      console.log('Making chat request with input:', input);
+      const data = await makeChatRequest(input);
+      console.log('API response data:', data);
       const { response: explanation, newsResults } = data;
       
-      // Format the response message
-      const responseText = explanation || "I couldn't find any specific information about that.";
-      
+      // Always show Grok's response
       setMessages(prev => [
         ...prev,
-        { id: prev.length + 1, sender: 'AI', text: responseText, timestamp: new Date() },
+        { id: prev.length + 1, sender: 'AI', text: explanation, timestamp: new Date() }
       ]);
-      
-      // Debug log: Card creation attempt
-      console.debug('[ChatSidebar] handleSend: newsResults', newsResults);
-      // If we got news results, create a new card only if there are valid articles
-      if (newsResults && Array.isArray(newsResults) && newsResults.length > 0) {
-        // Filter out articles with missing or empty titles/urls
-        const validArticles = newsResults.filter(
-          a => a && a.title && a.url
-        );
-        console.debug('[ChatSidebar] handleSend: validArticles', validArticles);
-        if (validArticles.length > 0) {
-          // Create a unique ID using a timestamp + random suffix to ensure uniqueness
-          const cardId = Date.now() + Math.floor(Math.random() * 1000);
-          console.debug('[ChatSidebar] handleSend: generated cardId', cardId);
+
+      if (newsResults?.length > 0) {
+        // Add debugging for the specific issue with "dogs" queries
+        console.log(`Creating card for search: "${input}", found ${newsResults.length} results:`, 
+          newsResults.map(a => a.title).join(', '));
+        
+        // Log raw results for inspection
+        console.log('Raw newsResults:', JSON.stringify(newsResults, null, 2));
           
-          // Format articles for compatibility with both React and vanilla JS
-          const formattedArticles = validArticles.map((article, i) => {
-            const articleId = cardId + i + 1; // Ensure unique IDs for each article
-            console.debug('[ChatSidebar] handleSend: formatting article', { index: i, id: articleId });
+        // Simple card creation - just format the articles with careful validation
+        const formattedArticles = newsResults
+          .filter(article => article && typeof article === 'object')  // Ensure each article is valid
+          .map(article => {
+            console.log('Processing article:', article);
             return {
-              id: articleId,
-              title: article.title,
-              category: getCategoryFromArticle(article),
-              source: article.source?.name || 'Unknown',
-              date: article.publishedAt ? new Date(article.publishedAt).toISOString().split('T')[0] : '',
-              summary: article.description || 'No description available',
-              url: article.url,
-              publishedAt: article.publishedAt,
-              // Add a reference to the parent card to help with debugging
-              cardRef: cardId,
-              queryText: input.slice(0, 50)
+              title: article.title || 'Untitled Article',
+              url: article.url || '#',
+              source: article.source?.name || 'News',
+              date: article.publishedAt?.split('T')[0] || new Date().toISOString().split('T')[0],
+              summary: article.description || ''
             };
-          });
-          
-          // Extract a more meaningful title from the input
-          const extractedTitle = input.match(/about\s+(.+)/i)?.[1] || // "Tell me about X" -> "X"
-                               input.match(/news\s+(?:about|on)\s+(.+)/i)?.[1] || // "news about X" -> "X"
-                               input.match(/show\s+me\s+(?:news\s+)?(?:about|on)\s+(.+)/i)?.[1] || // "show me news about X" -> "X"
-                               input.slice(0, 40); // Fallback to truncated input
-          
-          // Create a distinctive title by adding the timestamp
-          const distinctTitle = `${extractedTitle} (${new Date().toLocaleTimeString()})`;
-          
-          // Create a properly structured card for both React and vanilla JS
-          const newCard = {
-            id: cardId,
-            title: distinctTitle,
-            category: getCategoryFromInput(input),
-            source: 'News API',
-            date: new Date().toISOString().split('T')[0],
-            summary: explanation || 'Created from chat query',
-            articles: formattedArticles,
-            originalQuery: input,
-            timestamp: new Date().toISOString()
-          };
-          console.debug('[ChatSidebar] handleSend: prepared newCard', newCard);
-          
-          // Try to add the card and only show success if it is actually added
-          const addResult = onCreateCard(newCard);
-          console.debug('[ChatSidebar] handleSend: onCreateCard result', addResult);
-          // If onCreateCard returns false or undefined, do not show success
-          if (addResult === false) {
-            setTimeout(() => {
-              setMessages(prev => [
-                ...prev,
-                {
-                  id: prev.length + 1,
-                  sender: 'AI',
-                  text: `There was a problem creating the card. Please try again!`,
-                  timestamp: new Date()
-                },
-              ]);
-            }, 500);
-          } else {
-            setTimeout(() => {
-              setMessages(prev => [
-                ...prev,
-                {
-                  id: prev.length + 1,
-                  sender: 'AI',
-                  text: `✅ New card created with ${formattedArticles.length} article${formattedArticles.length !== 1 ? 's' : ''}!`,
-                  timestamp: new Date()
-                },
-              ]);
-            }, 500);
+          })
+          .filter(a => a.title && a.url); // Only keep articles with title and URL
+        
+        console.log('Formatted articles:', formattedArticles);
+        
+        // Create card with default category and current timestamp
+        const card = {
+          id: Date.now().toString(),
+          title: input.slice(0, 50),
+          category: input.toLowerCase().includes('dog') ? 'Pets' : 'Other', // Special handling for dogs
+          timestamp: new Date().toISOString(),
+          articles: formattedArticles
+        };
+
+        console.log('Attempting to create card:', card);
+        console.log('onCreateCard function exists:', Boolean(onCreateCard));
+
+        // Try to create the card
+        const success = onCreateCard(card);
+        console.log('Card creation result:', success);
+        
+        // Show the result
+        setMessages(prev => [
+          ...prev,
+          {
+            id: prev.length + 1,
+            sender: 'AI',
+            text: success ? 
+              `✅ Created card with ${card.articles.length} articles` :
+              `❌ Could not create card, try a different search (${card.articles.length} articles found)`,
+            timestamp: new Date()
           }
-        } else {
-          setTimeout(() => {
-            setMessages(prev => [
-              ...prev,
-              {
-                id: prev.length + 1,
-                sender: 'AI',
-                text: `No news articles found for that topic. Try a different search!`,
-                timestamp: new Date()
-              },
-            ]);
-          }, 500);
-        }
-      } else {
-        setTimeout(() => {
-          setMessages(prev => [
-            ...prev,
-            {
-              id: prev.length + 1,
-              sender: 'AI',
-              text: `No news articles found for that topic. Try a different search!`,
-              timestamp: new Date()
-            },
-          ]);
-        }, 500);
+        ]);
       }
     } catch (error) {
-      console.error('Error in chat request after all retries:', error);
-      let errorMessage = "Sorry, I couldn't process your request. Grok may be unavailable or returned an error.";
-      if (error.name === 'AbortError' || error.message.includes('timeout')) {
-        errorMessage = `The request timed out. The server might be busy or Grok is not responding. Please try again later.`;
-      } else if (error.message.includes('500')) {
-        errorMessage = `Grok returned a 500 error. Please try again later.`;
-      } else if (error.message.includes('429')) {
-        errorMessage = `Grok rate limit reached. Please try again in a moment.`;
-      }
+      console.error('Chat error:', error);
       setMessages(prev => [
         ...prev,
-        { id: prev.length + 1, sender: 'AI', text: errorMessage, timestamp: new Date() },
+        { id: prev.length + 1, sender: 'AI', text: 'Sorry, something went wrong. Please try again.', timestamp: new Date() }
+      ]);
+    } finally {
+      setIsThinking(false);
+    }
+  };
+  
+  // Handle command parsing for card management
+  const handleCommands = (text) => {
+    const commands = {
+      delete: /(delete|remove)\s+(the\s+)?(new|last|latest|this)?\s*card/i,
+      minimize: /(minimize|collapse)\s+(the\s+)?(new|last|latest|this)?\s*card/i,
+      expand: /(expand|maximize)\s+(the\s+)?(new|last|latest|this)?\s*card/i,
+      resize: /(resize|make)\s+(the\s+)?(new|last|latest|this)?\s*card\s+(compact|normal|expanded)/i
+    };
+
+    // Check if text matches any command pattern
+    for (const [action, pattern] of Object.entries(commands)) {
+      if (pattern.test(text)) {
+        // Get the most recent card by default
+        const recentCard = AppState.searchResults[AppState.searchResults.length - 1];
+        if (!recentCard) {
+          return {
+            response: "I don't see any cards to manage. Try searching for something first!",
+            handled: true
+          };
+        }
+
+        switch (action) {
+          case 'delete':
+            onDeleteCard(recentCard.id);
+            return {
+              response: `✅ Deleted card "${recentCard.title}"`,
+              handled: true
+            };
+          case 'minimize':
+            onUpdateCard(recentCard.id, { isMinimized: true });
+            return {
+              response: `✅ Minimized card "${recentCard.title}"`,
+              handled: true
+            };
+          case 'expand':
+            onUpdateCard(recentCard.id, { isMinimized: false });
+            return {
+              response: `✅ Expanded card "${recentCard.title}"`,
+              handled: true
+            };
+          case 'resize':
+            const size = text.match(/(compact|normal|expanded)/i)[0].toLowerCase();
+            onUpdateCard(recentCard.id, { cardSize: size });
+            return {
+              response: `✅ Resized card "${recentCard.title}" to ${size}`,
+              handled: true
+            };
+        }
+      }
+    }
+    return { handled: false };
+  };
+
+  const handleSubmit = async (e) => {
+    e?.preventDefault();
+    if (!input.trim()) return;
+
+    const newUserMessage = { 
+      id: messages.length + 1, 
+      sender: 'You', 
+      text: input.trim(), 
+      timestamp: new Date() 
+    };
+    setMessages(prev => [...prev, newUserMessage]);
+    setInput('');
+    setIsThinking(true);
+
+    // Check if the message is a card management command
+    const commandResult = handleCommands(newUserMessage.text);
+    if (commandResult.handled) {
+      setMessages(prev => [...prev, {
+        id: prev.length + 1,
+        sender: 'AI',
+        text: commandResult.response,
+        timestamp: new Date()
+      }]);
+      setIsThinking(false);
+      return;
+    }
+
+    // If not a command, proceed with normal chat handling
+    try {
+      const response = await makeChatRequest(newUserMessage.text);
+      console.log('API response data:', response);
+      const { response: explanation, newsResults } = response;
+      
+      // Always show Grok's response
+      setMessages(prev => [
+        ...prev,
+        { id: prev.length + 1, sender: 'AI', text: explanation, timestamp: new Date() }
+      ]);
+
+      if (newsResults?.length > 0) {
+        // Add debugging for the specific issue with "dogs" queries
+        console.log(`Creating card for search: "${input}", found ${newsResults.length} results:`, 
+          newsResults.map(a => a.title).join(', '));
+        
+        // Log raw results for inspection
+        console.log('Raw newsResults:', JSON.stringify(newsResults, null, 2));
+          
+        // Simple card creation - just format the articles with careful validation
+        const formattedArticles = newsResults
+          .filter(article => article && typeof article === 'object')  // Ensure each article is valid
+          .map(article => {
+            console.log('Processing article:', article);
+            return {
+              title: article.title || 'Untitled Article',
+              url: article.url || '#',
+              source: article.source?.name || 'News',
+              date: article.publishedAt?.split('T')[0] || new Date().toISOString().split('T')[0],
+              summary: article.description || ''
+            };
+          })
+          .filter(a => a.title && a.url); // Only keep articles with title and URL
+        
+        console.log('Formatted articles:', formattedArticles);
+        
+        // Create card with default category and current timestamp
+        const card = {
+          id: Date.now().toString(),
+          title: input.slice(0, 50),
+          category: input.toLowerCase().includes('dog') ? 'Pets' : 'Other', // Special handling for dogs
+          timestamp: new Date().toISOString(),
+          articles: formattedArticles
+        };
+
+        console.log('Attempting to create card:', card);
+        console.log('onCreateCard function exists:', Boolean(onCreateCard));
+
+        // Try to create the card
+        const success = onCreateCard(card);
+        console.log('Card creation result:', success);
+        
+        // Show the result
+        setMessages(prev => [
+          ...prev,
+          {
+            id: prev.length + 1,
+            sender: 'AI',
+            text: success ? 
+              `✅ Created card with ${card.articles.length} articles` :
+              `❌ Could not create card, try a different search (${card.articles.length} articles found)`,
+            timestamp: new Date()
+          }
+        ]);
+      }
+    } catch (error) {
+      console.error('Chat error:', error);
+      setMessages(prev => [
+        ...prev,
+        { id: prev.length + 1, sender: 'AI', text: 'Sorry, something went wrong. Please try again.', timestamp: new Date() }
       ]);
     } finally {
       setIsThinking(false);
@@ -260,26 +347,18 @@ const ChatSidebar = ({ isOpen, toggleSidebar, onCreateCard, onUpdateCard, onDele
   }, [messages, isThinking]);
 
   return (
-    <aside
-      className="flex flex-col h-full w-full bg-gray-800 text-gray-200"
-      aria-label="Chat with Grok"
-    >
-      <div className="p-2 bg-gray-900 text-gray-200 text-sm font-medium flex items-center justify-between">
-        <span className="flex items-center gap-1">
-          <span className="material-icons text-base">smart_toy</span>
-          Grok Assistant
-        </span>
-        {toggleSidebar && (
-          <button 
-            onClick={toggleSidebar}
-            className="text-gray-400 hover:text-white md:hidden"
-            aria-label="Close sidebar"
-          >
-            <span className="material-icons text-base">close</span>
-          </button>
-        )}
+    <div className={`chat-sidebar ${isOpen ? 'open' : ''}`}>
+      <div className="chat-header">
+        <div className="flex items-center">
+          <h2 className="chat-title">Chat</h2>
+          <HelpTooltip />
+        </div>
+        <button onClick={toggleSidebar} className="close-button">
+          <span className="sr-only">Close sidebar</span>
+          &times;
+        </button>
       </div>
-
+      
       <div
         ref={chatHistoryRef}
         className="flex-grow overflow-y-auto p-3 space-y-2"
@@ -362,8 +441,14 @@ const ChatSidebar = ({ isOpen, toggleSidebar, onCreateCard, onUpdateCard, onDele
           ↓
         </button>
       )}
-    </aside>
+    </div>
   );
 };
 
 export default ChatSidebar;
+
+// Simple string hash function for generating unique IDs
+function hashCode(str) {
+  return str.split('').reduce((prevHash, currVal) =>
+    (((prevHash << 5) - prevHash) + currVal.charCodeAt(0)) | 0, 0);
+}

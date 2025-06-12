@@ -25,22 +25,52 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-// Import our date formatting utilities 
-import { formatTabulatorDate } from './utils/dateUtils';
-
-// Add a custom datetime formatter for Tabulator that uses Luxon
-if (window.Tabulator) {
-  // Create a custom formatter that explicitly uses Luxon
-  Tabulator.prototype.extendModule("format", "formatters", {
-    "luxonDatetime": function(cell, formatterParams) {
-      // Use our utility function for robust date handling
-      return formatTabulatorDate(cell.getValue(), formatterParams);
-    }
-  });
+// Define formatTabulatorDate directly instead of importing to avoid module issues
+function formatTabulatorDate(dateStr, format = {}) {
+  if (!dateStr) return format.invalidPlaceholder || "";
   
-  // Also keep the original implementation as a fallback
-  Tabulator.prototype.extendModule("format", "formatters", {
-    "luxonDatetimeLegacy": function(cell, formatterParams){
+  try {
+    if (!window.luxon && !window.DateTime) {
+      console.error("Luxon not available");
+      return dateStr;
+    }
+    
+    const luxonDateTime = window.luxon ? window.luxon.DateTime : window.DateTime;
+    let dt;
+    
+    if (format.inputFormat === "iso") {
+      dt = luxonDateTime.fromISO(dateStr);
+    } else if (format.inputFormat === "sql") {
+      dt = luxonDateTime.fromSQL(dateStr);
+    } else {
+      dt = luxonDateTime.fromFormat(dateStr, format.inputFormat || "yyyy-MM-dd");
+    }
+    
+    if (dt.isValid) {
+      return dt.toFormat(format.outputFormat || "yyyy-MM-dd");
+    }
+    
+    return format.invalidPlaceholder || dateStr;
+  } catch (e) {
+    console.error("Date formatting error:", e);
+    return format.invalidPlaceholder || dateStr;
+  }
+}
+
+// Add formatters safely to Tabulator if it exists
+document.addEventListener('DOMContentLoaded', function() {
+  if (window.Tabulator) {
+    try {
+      console.log("Adding formatters to Tabulator");
+      // Simple direct assignment of formatter function
+      Tabulator.prototype.formatters.luxonDatetime = function(cell, formatterParams) {
+        return formatTabulatorDate(cell.getValue(), formatterParams);
+      };
+    } catch (e) {
+      console.error("Error setting up Tabulator formatters:", e);
+    }
+  }
+});
       if (!window.luxon || !window.luxon.DateTime) {
         console.error("Luxon DateTime not found!");
         return cell.getValue() || "";

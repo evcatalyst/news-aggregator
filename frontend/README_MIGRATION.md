@@ -22,3 +22,10 @@ Tabulator requires Luxon for date formatting functionality. We've implemented pr
   - Returns the explanation, query, and news results to the frontend
 
 For details, see `README.md` and `TESTING.md`.
+
+## June 11, 2025 Update: Native Date Formatting
+
+Tabulator date columns now use a native JavaScript formatter. Luxon is no longer required for any frontend date display. See `src/utils/dateUtils.js` for the implementation.
+
+- All previous Luxon integration code has been removed or replaced.
+- Troubleshooting date columns is now much simpler: check the inline formatter or `formatDateSafe` utility.

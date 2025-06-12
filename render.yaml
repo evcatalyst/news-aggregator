@@ -1,0 +1,31 @@
+services:
+  # Frontend Web Service
+  - type: web
+    name: news-aggregator-frontend
+    env: static
+    buildCommand: cd frontend && npm ci && npm run build
+    staticPublishPath: ./frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          name: news-aggregator-api
+          type: web
+          property: url
+
+  # Backend API Service
+  - type: web
+    name: news-aggregator-api
+    env: node
+    buildCommand: cd proxy && npm install
+    startCommand: cd proxy && node server.js
+    envVars:
+      - key: NEWS_API_KEY
+        sync: false
+      - key: XAI_API_KEY
+        sync: false
+      - key: PORT
+        value: 3000
+      - key: NODE_ENV
+        value: production
+    healthCheckPath: /health
+    autoDeploy: true

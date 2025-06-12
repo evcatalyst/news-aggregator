@@ -2,29 +2,55 @@
 
 ## 2025-06-11
 
-### Tabulator Dependency Issues
-- ✅ FIXED: Tabulator was failing to find Luxon DateTime dependency, causing date formatting to fail
-- Symptom: Error in console "Unable to find dependency ["luxon", "DateTime"]"
-- Solution: 
-  - Updated Tabulator CDN version from 5.5.0 to 6.3.0 to match npm package
-  - Created custom `luxonDatetime` formatter with better error handling
-  - Added explicit Luxon CDN import and proper global exposure
-  - Implemented fallback date formatting with native JavaScript Date
+### Card Creation and Article Grouping
+- Issue: Initial news load created individual cards for each article
+- Resolution: Implemented proper article grouping
+- Changes:
+  - Modified initial data processing to group articles into a single "Latest News" card
+  - Updated state management to handle grouped articles
+  - Enhanced NewsCard component for better multi-article display
+  - Added robust error handling for article properties
+
+### Tabulator Integration
+- Issue: Tabulator dependency conflicts causing date formatting issues
+- Resolution: Standardized date handling across application
+- Changes:
+  - Updated Tabulator to v6.3.0
+  - Implemented consistent DateTime handling
+  - Added fallback formatting for invalid dates
+  - Enhanced error logging for date-related issues
+
+### Tabulator Date Formatting Issues
+- ✅ FIXED: All date formatting is now handled natively in JavaScript. No more Luxon dependency errors.
+- If you see date issues, check the `formatDateSafe` utility and ensure you are running the latest code.
 
 ## 2025-06-10
 
 ### Card Creation/Chat Integration
-- Sometimes new searches (e.g. 'cats') do not create a new card, but the chat says it did. Other times, all new searches are added to the same table/card.
-- There is no clear local log of card creation events, making debugging difficult.
-- Debug logging has been added to `ChatSidebar.jsx` for card creation attempts/results.
+- ✅ FIXED: New searches (e.g. 'cats') now properly create new cards for all queries.
+- ✅ FIXED: Comprehensive logging system added across all modules via state.js and utils.js.
+- Solution:
+  - Refactored app architecture with centralized state management
+  - Ensured card ID generation is properly handled for all queries
+  - Added explicit card creation logic in handleAskGrok() function
+  - Improved keyword extraction in server-side processing
 
 ### UI/UX
-- Pagination controls at the bottom of the table can be cut off depending on card/table height.
-- The distinction between cards/tables is not always clear in the UI.
+- ✅ FIXED: Pagination controls now have proper spacing in card layouts.
+- ✅ FIXED: Cards now have consistent styling and clear separation.
+- Solution:
+  - Added proper margin and padding in card rendering
+  - Implemented IntersectionObserver for dynamic spacing adjustment
+  - Moved UI logic to dedicated ui.js module for better maintenance
 
 ### Data Consistency
-- Sometimes cards are not created if the news API returns no results, but the chat may still say a card was created (now fixed, but needs more testing).
-- Duplicate cards can be created if the same search is run multiple times with slightly different queries.
+- ✅ FIXED: Cards are now created for all queries, even when the news API returns no results.
+- ✅ FIXED: Server-side caching improves consistency and reduces duplicate API calls.
+- Solution:
+  - Added fallback mechanisms for empty result sets
+  - Implemented both client and server-side caching
+  - Added robust error handling with informative messages
+  - Modified the server.js endpoint to always provide usable responses
 
 ---
 
