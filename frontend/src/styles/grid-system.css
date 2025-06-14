@@ -1,0 +1,118 @@
+/* Grid System Styles */
+.grid-system-container {
+  position: relative;
+  min-height: calc(100vh - 150px);
+}
+
+/* Layout transitions */
+.grid-layout-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Card transitions */
+.news-card {
+  transition: all 0.3s ease;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.news-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Grid Manager styles */
+.grid-layout-manager {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1rem;
+}
+
+.layout-preview {
+  transition: all 0.2s ease;
+}
+
+.layout-preview:hover {
+  transform: scale(1.02);
+}
+
+.layout-preview.active {
+  box-shadow: 0 0 0 2px #4299e1;
+}
+
+/* Drag and drop styles */
+.grid-position {
+  transition: background-color 0.2s ease;
+}
+
+.grid-position.drag-over {
+  background-color: rgba(66, 153, 225, 0.1) !important;
+  border: 2px dashed #4299e1 !important;
+}
+
+.drag-handle {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.grid-position:hover .drag-handle {
+  opacity: 1;
+}
+
+/* Progressive enhancement */
+.no-js .grid-system-container {
+  display: block;
+}
+
+.no-js .news-card {
+  margin-bottom: 1rem;
+}
+
+/* Print styles */
+@media print {
+  .chat-sidebar,
+  .grid-layout-manager {
+    display: none !important;
+  }
+
+  .news-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border: 1px solid #eee;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .grid-system-container {
+    padding: 0.5rem;
+  }
+
+  .news-card {
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .news-card {
+    border: 2px solid black;
+    box-shadow: none;
+  }
+
+  .grid-position {
+    border: 2px solid black !important;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .grid-layout-transition,
+  .news-card,
+  .layout-preview {
+    transition: none;
+  }
+}

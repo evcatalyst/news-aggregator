@@ -7,6 +7,10 @@ export default defineConfig(({ command, mode }) => ({
   define: {
     'process.env.NODE_ENV': JSON.stringify(mode)
   },
+  server: {
+    port: 5173,
+    host: true
+  },
   build: {
     sourcemap: mode === 'development'
   }

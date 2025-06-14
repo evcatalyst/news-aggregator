@@ -2,6 +2,18 @@
 
 A modern news dashboard featuring AI-powered content aggregation, interactive data visualization, and real-time filtering capabilities.
 
+![News Aggregator Dashboard](docs/images/dashboard.png)
+
+## Project Preview
+
+### Features in Action
+| Feature | Screenshot |
+|---------|------------|
+| Dynamic News Grid | ![News Grid](docs/images/news-grid.png) |
+| AI-Enhanced Search | ![Search](docs/images/ai-search.png) |
+| Dark Mode | ![Dark Mode](docs/images/dark-mode.png) |
+| Data Visualization | ![Data Viz](docs/images/data-viz.png) |
+
 ## Overview
 
 The News Aggregator is a sophisticated web application that combines advanced news filtering with AI-driven content analysis. Built with modern web technologies and containerized for consistent development and deployment.
@@ -91,6 +103,24 @@ cd proxy && ./rebuild_stack.sh
 - **Frontend**: http://localhost:8080
 - **Proxy API**: http://localhost:3000
 - **Health Check**: http://localhost:3000/health
+
+---
+
+## Contributing Screenshots
+
+To update the project screenshots:
+
+1. Start the application:
+```zsh
+cd proxy && ./rebuild_stack.sh
+```
+
+2. Run the screenshot generation script:
+```zsh
+cd frontend && npm run screenshots
+```
+
+This will automatically capture screenshots of all major features and save them to `docs/images/`.
 
 ---
 

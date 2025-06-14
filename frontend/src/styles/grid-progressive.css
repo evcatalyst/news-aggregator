@@ -1,0 +1,76 @@
+/* Base styles - work everywhere */
+.grid-base .news-grid {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.grid-base .news-card {
+  margin-bottom: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+/* Progressive enhancement for grid layout */
+@supports (display: grid) {
+  .grid-enhanced .news-grid {
+    display: grid;
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .grid-enhanced .news-card {
+    margin-bottom: 0;
+    transition: all 0.3s ease;
+  }
+}
+
+/* Fallback for browsers without CSS Grid */
+.grid-base:not(.grid-enhanced) .news-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.grid-base:not(.grid-enhanced) .news-card {
+  flex: 1 1 300px;
+  max-width: calc(33.333% - 16px);
+}
+
+@media (max-width: 768px) {
+  .grid-base:not(.grid-enhanced) .news-card {
+    flex: 1 1 calc(50% - 16px);
+    max-width: calc(50% - 16px);
+  }
+}
+
+@media (max-width: 480px) {
+  .grid-base:not(.grid-enhanced) .news-card {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+}
+
+/* Fallback for no JS */
+.no-js .news-grid {
+  display: block;
+}
+
+.no-js .news-card {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+/* Print styles */
+@media print {
+  .news-grid {
+    display: block !important;
+  }
+
+  .news-card {
+    break-inside: avoid;
+    margin-bottom: 20px;
+  }
+}

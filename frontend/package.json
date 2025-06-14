@@ -12,7 +12,8 @@
     "test:e2e": "npx playwright test",
     "test:e2e:headed": "npx playwright test --headed",
     "test:e2e:debug": "npx playwright test --debug",
-    "test:e2e:install": "npx playwright install chromium"
+    "test:e2e:install": "npx playwright install chromium",
+    "screenshots": "npx playwright test \"src/__tests__/visual/screenshots.test.js\" --headed"
   },
   "devDependencies": {
     "@babel/core": "^7.27.4",
